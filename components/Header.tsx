@@ -15,17 +15,10 @@ const Header = () => {
             <div className="mr-3">
               <Logo />
             </div>
-            {typeof siteMetadata.headerTitle === 'string' ? (
-              <div className="hidden h-6 text-2xl font-semibold sm:block">
-                {siteMetadata.headerTitle}
-              </div>
-            ) : (
-              siteMetadata.headerTitle
-            )}
           </div>
         </Link>
       </div>
-      <div className="flex items-center space-x-4 leading-5 sm:space-x-6">
+      <div className="mt-navMarginTop flex items-center space-x-4 leading-5 sm:space-x-6">
         {headerNavLinks
           .filter((link) => link.href !== '/')
           .map((link) => (
@@ -34,7 +27,7 @@ const Header = () => {
               href={link.href}
               className={
                 link.title === 'Resume'
-                  ? 'hidden font-bold text-green-600 dark:text-green-400 sm:block'
+                  ? 'hidden font-bold text-logoColor sm:block'
                   : 'hidden font-medium text-gray-900 dark:text-gray-100 sm:block'
               }
             >

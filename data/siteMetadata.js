@@ -8,7 +8,7 @@ const siteMetadata = {
   theme: 'system', // system, dark or light
   siteUrl: 'https://huun-devlog.vercel.app',
   siteRepo: 'https://github.com/huun0424/huun.devlog',
-  siteLogo: '/static/images/logo.png',
+  siteLogo: '/static/images/logo.svg',
   socialBanner: '/static/images/twitter-card.png',
   email: 'huunl91@naver.com',
   github: 'https://github.com/huun0424',
