@@ -1,13 +1,9 @@
-import { Mail, Github, Facebook, Youtube, Linkedin, Twitter, Mastodon } from './icons'
+import { Mail, Github, Linkedin } from './icons'
 
 const components = {
   mail: Mail,
   github: Github,
-  facebook: Facebook,
-  youtube: Youtube,
   linkedin: Linkedin,
-  twitter: Twitter,
-  mastodon: Mastodon,
 }
 
 type SocialIconProps = {
@@ -21,7 +17,6 @@ const SocialIcon = ({ kind, href, size = 8 }: SocialIconProps) => {
     return null
 
   const SocialSvg = components[kind]
-
   return (
     <a
       className="text-sm text-gray-500 transition hover:text-gray-600"

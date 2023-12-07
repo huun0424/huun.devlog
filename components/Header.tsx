@@ -32,7 +32,11 @@ const Header = () => {
             <Link
               key={link.title}
               href={link.href}
-              className="hidden font-medium text-gray-900 dark:text-gray-100 sm:block"
+              className={
+                link.title === 'Resume'
+                  ? 'hidden font-bold text-green-600 dark:text-green-400 sm:block'
+                  : 'hidden font-medium text-gray-900 dark:text-gray-100 sm:block'
+              }
             >
               {link.title}
             </Link>
