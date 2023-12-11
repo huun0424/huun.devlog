@@ -9,7 +9,7 @@ const siteMetadata = {
   siteUrl: 'https://huun-devlog.vercel.app',
   siteRepo: 'https://github.com/huun0424/huun.devlog',
   siteLogo: '/static/images/logo.svg',
-  socialBanner: '/static/images/twitter-card.png',
+  socialBanner: '/static/images/logo.svg',
   email: 'huunl91@naver.com',
   github: 'https://github.com/huun0424',
   linkedin: 'https://www.linkedin.com', // todo: linkedin 계정 생성 후, 연동 필요.
@@ -82,6 +82,6 @@ const siteMetadata = {
     //   indexName: 'docsearch',
     // },
   },
-}
+};
 
-module.exports = siteMetadata
+module.exports = siteMetadata;
