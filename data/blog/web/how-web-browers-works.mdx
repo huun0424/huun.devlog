@@ -1,0 +1,81 @@
+---
+title: '웹 브라우저의 동작 방식'
+date: '2023-11-30'
+tags: ['web', 'browser']
+draft: true
+summary: '웹 브라우저의 동작 방식에 대한 학습. 구조, 통신 과정, 랜더링 과정.'
+---
+
+## 웹 브라우저란?
+
+- 웹 브라우저는 인터넷 상에서 www(word wide web)의 정보(웹 페이지, 이미지, 비디오 등의 콘텐츠)에 접근하여 사용자의 화면에 표현 하기 위해 사용되는 응용 프로그램이다. 크롬, 사파리, 파이어폭스 등이 대표적인 서비스이다.
+
+## 웹 브라우저의 역할
+
+- 웹 브라우저는 여러 기능이 있지만, 핵심 역할은 아래 두 가지로 요약 할 수 있다.
+  1. 웹 페이지 실행에 필요한 자원(resource)들을 서버에 요청(request)하고 문서 형태로 응답(response) 받는 _**클라이언트{`<->`}서버 간의 통신**_.
+  2. 응답 받는 자원(HTML, CSS, js 등)을 _**화면에 표현(rendering)**_.
+
+## 웹 브라우저의 구조
+
+- UI(User interface)
+  - 사용자가 브라우저와 상호 작용하는 요소들을 표현하는 _**웹 브라우저의 요소**_.
+  - 뒤로 가기, 앞으로 가기, 새로 고침, 즐겨찾기 버튼 등을 말함.
+- Browser Engine - Data Storage
+  - UI와 Rendering Engine의 매개체 역할.
+  - 사용자가 UI로 상호 작용한 입력을 Rendering Engine으로 전달하는 기능을 수행.
+- Data Storage
+  - 사용자 편의성을 위한 데이터들이 보관되는 저장소.
+  - localStorage, cache, cookie, bookmark 등 브라우저의 상태를 저장 / 관리하기 위해 사용됨.
+- Rendering Engine
+  - 웹 서버로 수신받은 자원(HTML, CSS, js)을 분석하여 화면에 표현하는 기능을 수행.
+  - 브라우저별 엔진
+    - Firefox & other Mozilla browsers: Gecko
+    - Chrome & Opera 15+: Blink
+    - Chrome (iPhone) & Safari: Webkit
+- Networking
+  - 브라우저에서 발생하는 통신을 처리를 담당.
+- JS Engine
+  - javascript code를 파싱, 분석하여 실행.
+- UI Backend
+  - Rendering Engine이 분석한 Render Tree를 브라우저에 그리는 역할.
+  - select, input과 같은 기본적인 위젯을 그리는 역할.
+
+## 웹 브라우저의 동작 순서
+
+- 웹 브라우저의 동작 순서는 크게 서버와 통신 과정과 수신 받은 자원을 화면에 표현하는 랜더링 과정 나뉘어 진다.
+- _**클라이언트 {`<->`} 서버 통신 과정**_
+
+  1. 유저가 브라우저의 주소창에 URL 입력.
+  2. URL을 IP 주소 형태로 변환 작업 진행.
+     a. 브라우저에서 local hosts file과 브라우저 cache에 입력 된 URL이 존재하는지 검사 진행 후, 존재 한다면 cache에 있는 해당 URL의 IP를 전달 받음.
+     b. 존재하지 않는다면, DNS(Domain Name System) 서버에 요청하여 URL 주소 중 도메인에 해당하는 IP 주소 검색 후 사용자가 입력한 URL 정보와 함께 전달 받음.
+  3. 전달 받은 IP 주소에 해당하는 서버에 자원을 요청.
+     a. router를 통해 경로를 찾고, ARP를 이용해 IP 주소를 MAC 주소로 변경.
+     b. 대상 서버와 TCP 통신을 위해 socket을 엶. (https의 경우 handshake)
+     c. 연결 완료 후, 자원을 요청. (이때 사용되는 프로토콜이 http, https)
+     d. 서버는 브라우저에 자원을 송신.
+
+- _**랜더링 과정.**_
+
+  1. 파서가 HTML 파일 파싱을 하며 DOM Tree를 빌드.
+     - HTML 파일을 한 줄 씩 읽으면서 진행되며, 파싱 도중 script tag를 만나면 아래 과정을 따른다.
+       - javascript code를 실행하기 위해 DOM 생성 프로세스를 중지하고 javascript engine으로 제어 권한을 양도.
+       - 제어 권한을 넘겨 받은 javascript engine은 script tag 내의 javascript code or file을 로드하고 파싱하여 실행.
+       - javascript 실행 완료 후 다시 HTML 파서로 제어 권한을 양도해 브라우저가 중지했던 시점부터 DOM 생성 재개.
+     - 파싱 도중 link tag 만나면 CSS 파싱 작업을 진행하고 완료 후, 다시 HTML 파싱을 진행.
+  2. 파서가 CSS 파일 파싱을 하며 CSSOM(CSS Object Model) Tree를 빌드.
+  3. DOM, CSSOM을 결합하여 Render Tree를 형성.
+  4. UI Backend에서 reflow & repaint를 통해 화면을 그리게 됨.
+
+## _Key Point_
+
+- 위 랜더링 과정에서 보면 알 수 있듯이, _**브라우저는 동기적(Synchronuous)으로**_ HTML, CSS, javascript를 처리한다. 때문에 script tag의 위치에 따라 blocking이 발생 하여 DOM 생성에 지연을 줄 수 있다. 이런 이유로 HTML _**body 요소의 가장 아래에 javascript를 위치 시켜 지연을 줄이는**_ 방식을 일반적으로 이용한다. 또한, 따른 부가적인 효과로 _**DOM이 완성되지 않은 상태에서 javascript가 DOM을 조작하여 발생하는 에러를 방지**_ 할 수도 있다.
+
+## ref
+
+- 서적: javascript deep dive
+- blog
+  - [브라우저 통신 과정](https://lesil.tistory.com/96)
+  - [브라우저 랜더링 과정](https://so-so.dev/web/browser-rendering-process/)
+  - [브라우저 원리](https://poiemaweb.com/js-browser)
