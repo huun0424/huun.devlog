@@ -7,13 +7,13 @@ import { genPageMetadata } from 'app/seo';
 export const metadata = genPageMetadata({ title: 'Resume' });
 
 export default function Page() {
-  const author = allResumes.find((p) => p.slug === 'default') as Resume;
-  const mainContent = coreContent(author);
+  const resume = allResumes.find((p) => p.slug === 'default') as Resume;
+  const mainContent = coreContent(resume);
 
   return (
     <>
       <ResumeLayout content={mainContent}>
-        <MDXLayoutRenderer code={author.body.code} />
+        <MDXLayoutRenderer code={resume.body.code} />
       </ResumeLayout>
     </>
   );
