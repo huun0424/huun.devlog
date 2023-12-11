@@ -9,7 +9,7 @@ const siteMetadata = {
   siteUrl: 'https://huun-devlog.vercel.app',
   siteRepo: 'https://github.com/huun0424/huun.devlog',
   siteLogo: '/static/images/logo.svg',
-  socialBanner: '/static/images/logo.svg',
+  socialBanner: '/static/images/logo_png.png',
   email: 'huunl91@naver.com',
   github: 'https://github.com/huun0424',
   linkedin: 'https://www.linkedin.com', // todo: linkedin 계정 생성 후, 연동 필요.
