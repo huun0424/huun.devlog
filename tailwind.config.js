@@ -15,6 +15,9 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
+      margin: {
+        navMarginTop: '7px',
+      },
       lineHeight: {
         11: '2.75rem',
         12: '3rem',
@@ -27,6 +30,7 @@ module.exports = {
       colors: {
         primary: colors.pink,
         gray: colors.gray,
+        logoColor: '#3abca0',
       },
       typography: ({ theme }) => ({
         DEFAULT: {
