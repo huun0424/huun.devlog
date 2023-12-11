@@ -9,7 +9,6 @@ export const metadata = genPageMetadata({ title: 'Resume' });
 export default function Page() {
   const resume = allResumes.find((p) => p.slug === 'default') as Resume;
   const mainContent = coreContent(resume);
-
   return (
     <>
       <ResumeLayout content={mainContent}>
