@@ -1,12 +1,11 @@
 import 'css/prism.css';
 import 'katex/dist/katex.css';
 
-import PageTitle from '@/components/PageTitle';
 import { components } from '@/components/MDXComponents';
 import { MDXLayoutRenderer } from 'pliny/mdx-components';
 import { sortPosts, coreContent, allCoreContent } from 'pliny/utils/contentlayer';
-import { allBlogs, allResumes } from 'contentlayer/generated';
-import type { Resume, Blog } from 'contentlayer/generated';
+import { allBlogs } from 'contentlayer/generated';
+import type { Blog } from 'contentlayer/generated';
 import PostSimple from '@/layouts/PostSimple';
 import PostLayout from '@/layouts/PostLayout';
 import PostBanner from '@/layouts/PostBanner';

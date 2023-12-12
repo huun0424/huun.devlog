@@ -5,6 +5,7 @@ import siteMetadata from '@/data/siteMetadata';
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = siteMetadata.siteUrl;
 
+  // Filter out drafts in production
   const blogRoutes = allBlogs
     .filter((post) => !post.draft)
     .map((post) => ({

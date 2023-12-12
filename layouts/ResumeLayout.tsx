@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default function ResumeLayout({ children, content }: Props) {
-  const { name, avatar, occupation, company, email, twitter, linkedin, github } = content;
+  const { name, avatar, occupation, email, linkedin, github } = content;
 
   return (
     <>
