@@ -13,7 +13,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const company = decodeURI(params.company);
   return genPageMetadata({
-    title: company,
+    title: `Experience ${company.toUpperCase()}`,
     description: `${siteMetadata.title} ${company} experience`,
     alternates: {
       canonical: './',
