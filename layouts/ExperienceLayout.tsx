@@ -16,10 +16,10 @@ export default function ExperienceLayout() {
             Work Experience
           </h1>
           <div className="text-lg leading-5 text-gray-500 dark:text-gray-400">
-            <p>6년간 재직한 회사에서 참여한 경력 리스트</p>
+            <p>6년간 재직한 회사에서 참여한 업무 경험 리스트</p>
             <div className="flex max-w-lg flex-wrap">
               <p className="mb-2 mr-1 mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                회사 별 참여 프로젝트 :
+                회사 별 포스트 :
               </p>
               {companyList.map(({ name, count }) => {
                 return (
