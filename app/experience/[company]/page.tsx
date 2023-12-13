@@ -38,11 +38,6 @@ export default function ExperienListPage({ params }: { params: { company: string
 
   const filteredPosts = allCoreContent(allExperiences.filter((post) => post.company === company));
 
-  console.log(
-    filteredPosts,
-    company,
-    allExperiences.filter((post) => post.company === company)
-  );
   return (
     <ExperienceListLayout
       company={company}

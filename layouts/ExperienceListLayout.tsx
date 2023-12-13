@@ -37,7 +37,6 @@ export default function ExperienceListLayout({ company, posts }: ExperienceListL
               </div>
 
               {companyKeys.map((_company) => {
-                console.log(company, _company);
                 return (
                   <div key={_company} className="mb-2 mr-5">
                     <Link
