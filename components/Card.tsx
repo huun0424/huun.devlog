@@ -1,15 +1,15 @@
+import { CoreContent } from 'pliny/utils/contentlayer';
 import Image from './Image';
 import Link from './Link';
+import { Experience } from 'contentlayer/generated';
 
-interface CardProps {
-  company?: string;
-  title: string;
-  description: string;
-  imgSrc: string;
-  href: string;
-}
-
-const Card = ({ company, title, description, imgSrc, href }: CardProps) => (
+const Card = ({
+  company,
+  title,
+  description,
+  imgSrc,
+  href,
+}: Pick<CoreContent<Experience>, 'company' | 'title' | 'description' | 'imgSrc' | 'href'>) => (
   <div className="md max-w-[544px] p-4 md:w-1/2">
     <div
       className={`${
