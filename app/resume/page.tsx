@@ -3,6 +3,7 @@ import { MDXLayoutRenderer } from 'pliny/mdx-components';
 import ResumeLayout from '@/layouts/ResumeLayout';
 import { coreContent } from 'pliny/utils/contentlayer';
 import { genPageMetadata } from 'app/seo';
+import { components } from '@/components/MDXComponents';
 
 export const metadata = genPageMetadata({ title: 'Resume' });
 
@@ -12,7 +13,7 @@ export default function Page() {
   return (
     <>
       <ResumeLayout content={mainContent}>
-        <MDXLayoutRenderer code={resume.body.code} />
+        <MDXLayoutRenderer code={resume.body.code} components={components} />
       </ResumeLayout>
     </>
   );
