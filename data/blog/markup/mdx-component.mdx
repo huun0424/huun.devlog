@@ -1,0 +1,98 @@
+---
+title: 'MDX 알아보기'
+date: '2023-12-03'
+tags: ['mdx', 'markdown', 'NextJS']
+draft: false
+summary: 'MDX의 정의, 기본 사용법, 그리고 NextJS에서 custom component 적용 방법 등을 학습.'
+---
+
+## MDX란?
+
+- 공식 홈페이지의 'Markdown for the component era'라는 문구에서 알 수 있듯이 MDX는 JSX를 사용할 수 있는 마크다운이다. 즉 .jsx, .tsx 처럼 컴포넌트를 사용 할 수 있는 .md로 이해하면 된다.
+
+## MDX Component
+
+- 문자열로만 작성되던 기존 CommonMark 대신, JSX 형식을 사용 함으로써 CommonMark 스타일링이 가능.
+- ```
+  // 기존 markdown에서 링크 표현.
+  [MDX](https://mdxjs.com 'title')
+
+  // mdx에서 jsx로 링크 표현
+  <>
+    <p>
+      <a href="https://mdxjs.com" title="title">
+        MDX
+      </a>
+    </p>
+  </>
+  ```
+
+  <a href="https://mdxjs.com/table-of-components/" title="title">
+    더 많은 예제 보기
+  </a>
+
+## Custom Component 사용하기
+
+- jsx or tsx file
+
+  ```jsx
+  import Readme from './readme.mdx'; // components를 사용할 mdx 파일.
+  import customHeader from './component/customHeader'; // custom component
+  import customA from './component/customA'; // custom component
+
+  // custom component 정의
+  const components = {{
+    customHeader,
+    customA
+  }}
+
+  <Readme components={{a: FancyLink}} />
+  ```
+
+- mdx file
+  ```md
+  마크다운 커스텀 컴포넌트 사용하기!
+  <customHeader> 커스텀 헤더 </customHeader>
+  <customA> 커스텀 a 태그 </customA>
+  ```
+
+## NextJS에서 contentLayer로 MDX Component 사용하기
+
+- NextJS에서는 가장 많이 사용되는 MDX 컨텐츠 생성 패키지로 next-mdx-remote, contentlayer 를 소개하고 있다. 그 중 contentLayer를 이용한 MDX component 생성 방법을 다뤄보자.
+
+  ```tsx
+  import { allMdxPosts } from 'contentlayer/generated'; // contentLayer로 생성된 정적 page list.
+  import type { MDXComponents } from 'mdx/types';
+  import { useMDXComponent } from 'next-contentlayer/hooks';
+
+  // 1. override 또는 custom component를 선언.
+  const mdxComponents: MDXComponents = {
+    a: ({ href, children }) => <a href={href as string}>{children}</a>,
+    MyComponent: () => <div>Hello World!</div>,
+  };
+
+  export default async function Page({ params }: { params: { slug: string } }) {
+    const post = allMdxPosts.find((post) => post._raw.flattenedPath === params.slug);
+    if (!post) notFound();
+
+    // 2. useMDXComponent로 현재 접속한 mdx page를 매핑.
+    // Custom Component의 import Readme from './readme.mdx'를 slug에 해당하는 page로 동적 처리 하는 방식.
+    const MDXContent = useMDXComponent(post.body.code);
+
+    return (
+      <div>
+        {/* 3. 1번에서 정의한 custom component를 MDXContent에 할당 */}
+        <MDXContent components={mdxComponents} />
+      </div>
+    );
+  }
+  ```
+
+- 상기 예시는 contentLayer로 정적 사이트 생성 후, MDX component를 사용하는 방법이다. contentLayer 사용법은 다음 포스트에서 확인 할 수 있다. (contentLayer 사용하기 - 작성중)
+
+## ref
+
+- docs
+  - [MDX component 공식 문서](https://mdxjs.com/table-of-components/)
+  - [NextJS MDX](https://nextjs.org/docs/pages/building-your-application/configuring/mdx#remote-mdx)
+  - [contentLayer MDX Component](https://contentlayer.dev/docs/sources/files/mdx-d747e46d)
