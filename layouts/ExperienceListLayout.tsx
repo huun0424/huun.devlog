@@ -25,7 +25,7 @@ export default function ExperienceListLayout({ company, posts }: ExperienceListL
             Work Experience
           </h1>
           <div className="text-lg leading-5 text-gray-500 dark:text-gray-400">
-            <p>6년간 재직한 회사에서 참여한 업무 경험 리스트</p>
+            <p>{company?.toUpperCase()} 에서 재직중 참여한 업무 경험 리스트</p>
             <div className="mt-10 flex max-w-lg flex-wrap">
               <div className=" mb-2 mr-5">
                 <Link
