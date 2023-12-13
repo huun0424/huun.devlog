@@ -25,7 +25,7 @@ const Header = () => {
           .filter((link) => link.href !== '/')
           .map((link) =>
             isProduction ? (
-              ['Projects', 'Experience'].includes(link.title) && (
+              !['Projects', 'Experience'].includes(link.title) && (
                 <Link
                   key={link.title}
                   href={link.href}
