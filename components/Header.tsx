@@ -7,6 +7,8 @@ import ThemeSwitch from './ThemeSwitch';
 import SearchButton from './SearchButton';
 
 const Header = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return (
     <header className="flex items-center justify-between py-10">
       <div>
@@ -21,19 +23,35 @@ const Header = () => {
       <div className="mt-navMarginTop flex items-center space-x-4 leading-5 sm:space-x-6">
         {headerNavLinks
           .filter((link) => link.href !== '/')
-          .map((link) => (
-            <Link
-              key={link.title}
-              href={link.href}
-              className={
-                link.title === 'Resume'
-                  ? 'hidden font-bold text-logoColor sm:block'
-                  : 'hidden font-medium text-gray-900 dark:text-gray-100 sm:block'
-              }
-            >
-              {link.title}
-            </Link>
-          ))}
+          .map((link) =>
+            isProduction ? (
+              ['Projects', 'Experience'].includes(link.title) && (
+                <Link
+                  key={link.title}
+                  href={link.href}
+                  className={
+                    link.title === 'Resume'
+                      ? 'hidden font-bold text-logoColor sm:block'
+                      : 'hidden font-medium text-gray-900 dark:text-gray-100 sm:block'
+                  }
+                >
+                  {link.title}
+                </Link>
+              )
+            ) : (
+              <Link
+                key={link.title}
+                href={link.href}
+                className={
+                  link.title === 'Resume'
+                    ? 'hidden font-bold text-logoColor sm:block'
+                    : 'hidden font-medium text-gray-900 dark:text-gray-100 sm:block'
+                }
+              >
+                {link.title}
+              </Link>
+            )
+          )}
         <SearchButton />
         <ThemeSwitch />
         <MobileNav />
