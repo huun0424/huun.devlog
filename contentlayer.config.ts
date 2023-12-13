@@ -62,6 +62,21 @@ function createTagCount(allBlogs) {
   writeFileSync('./app/tag-data.json', JSON.stringify(tagCount));
 }
 
+function createCompanyCount(allExperience) {
+  const companyCount: Record<string, number> = {};
+  allExperience.forEach((file) => {
+    if (file.company) {
+      const formattedCompany = GithubSlugger.slug(file.company);
+      if (formattedCompany in companyCount) {
+        companyCount[formattedCompany] += 1;
+      } else {
+        companyCount[formattedCompany] = 1;
+      }
+    }
+  });
+  writeFileSync('./app/company-data.json', JSON.stringify(companyCount));
+}
+
 function createSearchIndex(allBlogs) {
   if (
     siteMetadata?.search?.provider === 'kbar' &&
@@ -110,6 +125,34 @@ export const Blog = defineDocumentType(() => ({
   },
 }));
 
+export const Experience = defineDocumentType(() => ({
+  name: 'Experience',
+  filePathPattern: 'experience/**/*.mdx',
+  contentType: 'mdx',
+  fields: {
+    seq: { type: 'number', required: true },
+    title: { type: 'string', required: true },
+    company: { type: 'string', required: true },
+    description: { type: 'string' },
+    imgSrc: { type: 'string' },
+    href: { type: 'string' },
+  },
+  computedFields: {
+    ...computedFields,
+    structuredData: {
+      type: 'json',
+      resolve: (doc) => ({
+        '@context': 'https://schema.org',
+        '@type': 'ExperiencePosting',
+        headline: doc.title,
+        description: doc.description,
+        image: doc.imgSrc ? doc.imgSrc : siteMetadata.socialBanner,
+        url: `${siteMetadata.siteUrl}/${doc._raw.flattenedPath}`,
+      }),
+    },
+  },
+}));
+
 export const Resume = defineDocumentType(() => ({
   name: 'Resume',
   filePathPattern: 'resume/**/*.mdx',
@@ -130,7 +173,7 @@ export const Resume = defineDocumentType(() => ({
 
 export default makeSource({
   contentDirPath: 'data',
-  documentTypes: [Blog, Resume],
+  documentTypes: [Blog, Experience, Resume],
   mdx: {
     cwd: process.cwd(),
     remarkPlugins: [
@@ -150,8 +193,10 @@ export default makeSource({
     ],
   },
   onSuccess: async (importData) => {
-    const { allBlogs } = await importData();
+    const { allBlogs, allExperiences } = await importData();
     createTagCount(allBlogs);
     createSearchIndex(allBlogs);
+
+    createCompanyCount(allExperiences);
   },
 });
