@@ -6553,6 +6553,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"huun-design-system@npm:^0.0.1":
+  version: 0.0.1
+  resolution: "huun-design-system@npm:0.0.1"
+  peerDependencies:
+    react: ^18.0.2
+    react-dom: ^18.0.2
+  checksum: 510cc2b78aa7be4a99837c910dae509285bda33dbec87e7b6090d4fc1068e21ed734ad342f851d2fd25d0945c52f2e7dbd217605528b20c833f7814d3f33f928
+  languageName: node
+  linkType: hard
+
 "iconv-lite@npm:^0.4.4":
   version: 0.4.24
   resolution: "iconv-lite@npm:0.4.24"
@@ -10960,6 +10970,7 @@ __metadata:
     github-slugger: ^1.4.0
     gray-matter: ^4.0.2
     husky: ^8.0.0
+    huun-design-system: ^0.0.1
     image-size: 1.0.0
     lint-staged: ^13.0.0
     next: 14.0.3
