@@ -1,0 +1,99 @@
+---
+title: 'React UI npm 패키지 만들기 - 2. npm 배포하기'
+date: '2023-07-09'
+tags: ['react', 'study', 'npm', 'tailwind']
+draft: false
+summary: 'react 기반 npm 패키지 만들기 2편. npm 배포하기 및 yarn link 사용하기.'
+---
+
+_2023.07.09 작성된 study 보강자료_
+
+##### [연결된 이전글 (React UI npm 패키지 만들기 - 1. npm 기본 설정)](https://huun-devlog.vercel.app//blog/react/npm-module-setting)
+
+##### _연결된 다음글 (React UI npm 패키지 만들기 - 3. npm 패키지에 tailwind 적용하기)(작성중)_
+
+## npm publish 과정
+
+1. npm에 publish 하기전, test용 comp 제작.
+
+   ```tsx
+   // src/Button/index.tsx
+   const Button = () => {
+     return <button type="button">link test button</button>;
+   };
+
+   export default Button;
+   ```
+
+2. npm login 및 package.json 수정.
+
+   - 이때, name이 실제 npm name으로 사용되므로, _**npm 사이트에서 중복되지 않는 값으로 설정 필요.**_
+
+   ```json
+   // package.json
+   {
+     ...
+     "module": "dist/index.js",
+     "types": "dist/types/index.d.ts",
+     "files": [
+       "/dist"
+     ],
+   }
+   ```
+
+3. 터미널 창에 npm 배포 cmd 입력.
+
+   ```
+   npm publish
+   ```
+
+   ![npm publish 완료](/static/images/blog/react-module/npm-publish-cmd.png)
+
+4. npm site에서 publish 완료 확인하기.
+   ![npm publish 사이트에서 완료 확인](/static/images/blog/react-module/npm-publish-site.png)
+
+5. 다른 프로젝트에서 install 후 확인하기. (test button)
+   ![npm publish 프로젝트에서 완료 확인](/static/images/blog/react-module/npm-publish-complite.png)
+
+## npm 배포하지 않고 다른 프로젝트에서 실시간으로 연동하기
+
+- 매번 npm에 배포하고 yarn install 하면서 개발을 진행하기엔 불편함이 있다. npm/yarn link를 통해 symlink를 생성하여, npm 서버가 아닌 symlink에 package를 연결해 배포하지 않고 local에서 개발할 수 있는 방법을 알아보자.
+
+1. npm 패키지 프로젝트 터미널에서 npm/yarn link cmd 입력
+
+   ```
+   // huun-design-system terminal
+   yarn link
+   ```
+
+   ![yarn link](/static/images/blog/react-module/yarn-link-package.png)
+
+2. npm 패키지를 사용하는 프로젝트 터미널에 npm/yarn link package_name cmd 입력
+
+   ```
+   // test project terminal
+   yarn link huun-desing-system
+   ```
+
+   ![yarn link 프로젝트](/static/images/blog/react-module/yarn-link-test.png)
+
+3. npm 패키지에서 test button text를 link test button으로 변경 후, build 하면 사용하는 프로젝트에서 바로 확인 가능.
+   ![yarn link 프로젝트 변경 확인](/static/images/blog/react-module/yarn-link-test-success.png)
+
+4. 사용을 마친 후 npm 패키지를 사용하는 프로젝트 터미널에 yarn unlink package_name cmd 입력
+
+   ```
+   // huun-design-system terminal
+   yarn unlink
+   ```
+
+   ![yarn unlink](/static/images/blog/react-module/yarn-unlink.png)
+
+5. npm 패키지 프로젝트 터미널에서 yarn unlink cmd 입력.
+
+   ```
+   // test project terminal
+   yarn unlink huun-desgin-system
+   ```
+
+   ![yarn unlink project](/static/images/blog/react-module/yarn-unlink-project.png)
