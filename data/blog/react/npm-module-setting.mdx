@@ -1,0 +1,204 @@
+---
+title: 'React UI npm 패키지 만들기 - 1. npm 기본 설정'
+date: '2023-12-18'
+tags: ['react', 'study', 'npm', 'tailwind']
+draft: false
+summary: 'react 기반 npm 패키지 만들기 & tailwind 적용 학습.'
+---
+
+_2023.03.09 작성된 초안 수정 및 개선본_
+
+## UI npm 패키지를 도입하는 이유
+
+- 별도 프로젝트로 관리하여 다수의 프로젝트에서 동일한 UI 경험을 제공하기 위함.
+- UI를 하나의 시스템으로 관리하기 때문에, UI 패키지를 사용 프로젝트에서는 보다 비즈니스 로직에 집중 가능.
+
+## react UI npm 패키지 만들기 과정
+
+1.  npm init
+
+    - 터미널에 repo initialize cmd 입력 후, 기본 세팅.
+
+    ```
+    npm init or yarn init
+    ```
+
+    ![프로젝트 기본 세팅](/static/images/blog/react-module/init.png)
+
+2.  react 설치.
+
+    - 경량화를 위해 개발 의존성으로 설치 후, peer로 사용되는 프로젝트에서 react version을 명시.
+
+    ```
+    yarn add --peer react@^18.0.2 react-dom@^18.0.2
+    yarn add --dev react@^18.0.2 react-dom@^18.0.2
+    ```
+
+    - _peer 명령어를 우선 수행해야 함._
+
+3.  typescript 설치.
+
+    - typescript install cmd 입력.
+
+    ```
+    yarn add --dev typescript @types/react
+    ```
+
+4.  typescript 세팅.
+
+    - typescript init cmd 입력하고(or root 디렉터리에 tsconfig.json 파일 생성), tsconfig.json 파일 사용자의 프로젝트에 맞게 값 설정.
+
+    ```
+    tsc --init
+    ```
+
+    ```json
+    /* example. 각 속성별 설명은 tsc --init시 생성된 파일에서 확인 가능. */
+    {
+      "compilerOptions": {
+        "target": "es5",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "jsx": "react-jsx",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "baseUrl": ".",
+        "allowJs": false,
+        "declaration": true,
+        "outDir": "./dist",
+        "noEmit": false,
+        "declarationDir": "types",
+        "isolatedModules": false,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true
+      },
+      "include": ["src"],
+      "exclude": ["node_modules"]
+    }
+    ```
+
+5.  rollup 세팅
+
+    - rollup 선정 이유.
+
+      - UI 컴포넌트만 이루어진 비교적 작은 프로젝트이므로 rollup 선택.
+      - bundler 별 간단 비교.
+
+      ```
+      Rollup:
+      - Rollup은 작은 라이브러리와 패키지를 빌드하기 위해 설계된 모듈 번들러.
+      - ES6 모듈을 사용하는 애플리케이션에 가장 적합
+      - 트리 쉐이킹에 중점을 둬서 사용되지 않는 코드를 제거하여 크기 최소화.
+
+      Parcel:
+      - Parcel은 빠르고 간단한 모듈 번들러로, 설정 없이도 사용 가능.
+      - 자동으로 파일을 분석하여 최적의 번들을 생성.
+      - 프로젝트 설정이 적은 애플리케이션을 빌드시 유용.
+
+      Webpack:
+      - Webpack은 모듈 번들러로, 다양한 유형의 모듈을 번들링 가능.
+      - 코드 분할, 로더, 플러그인 등 다양한 기능을 제공하여 유연하게 사용 가능.
+      - 주로 대형 애플리케이션의 번들링에 사용.
+
+      요약
+      - Rollup은 작은 패키지 사용에 적합.
+      - Parcel은 프로젝트 설정이 적은 애플리케이션을 빌드시 적합.
+      - Webpack은 대형 애플리케이션을 빌드시 적합.
+      ```
+
+    - rollup 패키지 & 플러그인 install
+
+      ```
+      yarn add --dev @babel/plugin-transform-runtime @rollup/plugin-json @rollup/plugin-babel @rollup/plugin-commonjs @rollup/plugin-node-resolve @rollup/plugin-typescript @rollup/plugin-url @svgr/rollup rollup rollup-plugin-peer-deps-external
+      ```
+
+      - 플러그인 설명.
+
+        ```
+        @babel/plugin-transform-runtime
+            - Babel 트랜스파일링 시, 코드를 변환하면서 필요한 런타임 함수들을 별도의 모듈로 분리하여 번들 파일의 크기 최소화.
+        @rollup/plugin-babel
+            - Rollup에서 Babel을 사용하여 ES6+ 코드를 ES5 코드로 변환.
+        @rollup/plugin-commonjs
+            - CommonJS 형식의 모듈을 Rollup 번들에 포함.
+        @rollup/plugin-node-resolve
+            - 모듈 경로를 설정 역할.
+        @rollup/plugin-typescript
+            - TypeScript 파일(.ts)을 번들링.
+        @rollup/plugin-url
+            - 파일을 URL로 참조할 수 있는 형식으로 번들링.
+        @svgr/rollup
+            - SVG 파일을 React 컴포넌트로 변환해주는 라이브러리인 SVGR을 Rollup 번들러와 함께 사용 가능.
+        @rollup/plugin-json
+            - json 파일을 ES6 모듈로 변환.
+        rollup-plugin-peer-deps-external
+            - Peer dependencies로 설치된 모듈들을 Rollup 번들에 포함시키지 않고, 외부에서 불러와 사용.
+        ```
+
+    - root directory에 rollup.config.mjs 파일 생성 후, 값 설정.
+
+      ```
+      // example
+      import resolve from '@rollup/plugin-node-resolve';
+      import babel from '@rollup/plugin-babel';
+      import typescript from '@rollup/plugin-typescript';
+      import commonjs from '@rollup/plugin-commonjs';
+      import json from '@rollup/plugin-json';
+      import svgr from '@svgr/rollup';
+      import url from '@rollup/plugin-url';
+      import peerDepsExternal from 'rollup-plugin-peer-deps-external';
+      const extensions = ['.js', '.jsx', '.ts', '.tsx'];
+      export default {
+        // src/index.ts 파일 필요. 해당 경로는 프로젝트에 따라 custom 설정하기.
+        input: './src/index.ts',
+        output: [
+            {
+            file: 'dist/index.js',
+            format: 'es',
+            sourcemap: true,
+            },
+        ],
+        external: [/@babel\/runtime/],
+        plugins: [
+            url(),
+            svgr({
+            dimensions: false,
+            }),
+            peerDepsExternal(),
+            resolve({ extensions }),
+            commonjs({ include: 'node_modules/**' }),
+            babel({
+            babelHelpers: 'runtime',
+            presets: [
+                '@babel/env',
+                ['@babel/react', { runtime: 'automatic' }],
+                '@babel/typescript'
+                ],
+            plugins: ['@babel/plugin-transform-runtime'],
+            extensions,
+            }),
+            // storybook 추가시 story 관련 파일은 build에 포함시키지 않음.
+            typescript({ exclude: ['**/*.stories.tsx', 'node_modules'] }),
+            json(),
+        ],
+      };
+      ```
+
+    - package json에 rollup build script 추가.
+
+      ```
+      // package.json
+      {
+          ...
+          "script": {
+              ...
+              "build": "rollup -c"
+          }
+      }
+      ```
+
+    - rollup.config.mjs 에서 설정한 input 경로의 파일 생성 후, yarn build cmd로 build 테스트..
+      ![rollup build test](/static/images/blog/react-module/rollup-build.png)
