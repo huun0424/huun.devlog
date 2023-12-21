@@ -120,6 +120,11 @@ export default function ListLayoutWithTags({
             </div>
           </div>
           <div>
+            {title === 'Study' && (
+              <p className="text-xl font-bold text-amber-600">
+                {title}자료 notion {'>'} blog 이전 작업중...
+              </p>
+            )}
             <ul>
               {displayPosts.map((post) => {
                 const { path, date, title, summary, tags } = post;
