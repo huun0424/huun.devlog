@@ -1,0 +1,155 @@
+---
+title: 'chrome-extension'
+date: '2023-10-16'
+tags: ['chrome-extension', 'study']
+draft: false
+summary: 'chrome extension 알아보기'
+---
+
+## 크롬 확장 프로그램 이란?
+
+- 브라우저에서 실행되는 사용자 맞춤 소프트웨어.HTML, javascript, css 와 같은 웹 기술을 기반으로 개발.
+
+## 주제 선정 이유.
+
+- 기획 & 마케팅 & 데이터 분석과 같은 비개발 직군에서 google analytics 적용시 정상 작동 여부를 확인하는데 번거로움이 있음.
+- 개발자 도구를 열어서 확인 할 수 있지만, 보다 직관적으로 확인 할 수 있는 방법을 찾고자 주제로 선정.
+
+## 크롬 확장 프로그램 프로젝트 구성.
+
+- html, css, js file로 구성.
+
+  - react 보일러 플레이트도 있지만 2023년 초 v3로 버전업되며 프로젝트 구조 변화가 있었고, node modules 등 의존적 요소들이 있어서 현 시점에서 쓰지 않는게 좋겠다고 판단.
+
+- 구조
+
+  ```
+  my-chrome-extension
+      - manifest.json
+      - background script.js // (구) background - scripts
+      - content-script.js
+      - action/ // (구) brower_action
+      - popup.css
+          - popup.js
+          - popup.html
+      - devtools/
+          - devtools.js
+          - devtools.html // home index.html의 개념.
+          - panel.html // page의 개념.
+          - panel.js
+      - options/
+      - options.css
+          - options.js
+          - options.html
+      - icons/
+          - 16.png
+          - 32.png
+          - 48.png
+          - 128.png
+  ```
+
+  - 구조 항목별 상세
+    - **manifest.json**: manifest version과 extension 이름 등 프로젝트 명세서 파일.
+      - 특히, 최근 manifest v3는 v2화 구조적으로 차이점이 있음.
+      - browser의 resource에 접근 권한. storage / webRequest 등의 많이 사용되는 기능들도 permission을 줘야 사용 가능.
+    - **service-worker.js**: 브라우저 이벤트에 반응해서 동작하는 script.
+      - 브라우저에서 실행중인 모든 tab에서 유지.
+      - 크롬을 종료하기 전까지 계속 살아 있음.
+      - cross-origin XMLHttpRequest가 가능해 permission을 추가하면 외부 API를 호출 가능.
+        - 공개 API라면 이를 content scripts 내에서 호출하는 것도 가능하겠지만, 보안이 API는 그렇지 않으므로 cross-origin 요청이 가능한 background page에서 호출.
+        - 하이라이트 정보를 담은 메시지를 content script → background script → background script에서 api 호출 후 response → content script
+    - **content-script.js**: 웹 페이지와 직접 통신 가능한 script
+      - 현재 실행중인 web과 독립된 공간에서 실행.(기존 사이트의 변수과 겹침 x)
+      - web page에 직접 접근 가능.
+        - web page의 DOM에 접근해 수정 및 임임의 DOM 생성 가능.
+      - web page & browser의 event 감지 및 custom이 가능.
+    - **devtools**: 개발자도구에서 tab으로 구현 가능한 영역.
+      - 개발자 도구 내부의 tab만 이동해도 devtools.html이 rerendering 됨.
+      - rerendering을 막으려면 해당 tabId와 정보를 background storage에 저장하는 등의 관리 조치가 필요.
+    - **options**: extension 관리하는 설정 page
+    - action: extension 아이콘 클릭시 노출되는 popup page
+
+## v2 / v3 주요 차이점
+
+    - background: service_worker.
+        - v2에서는 멀티 선언이 가능했지만, v3로 오면서 단일 파일내에 멀티 임포트를 권장하는 것으로 바뀜
+
+            ```jsx
+            // v2 manifest
+            {
+            	...
+            	 "background": {
+                    "scripts": [
+                        "libs/OmnibugSettings.js",
+                        "libs/OmnibugPort.js",
+                        "providers.js",
+                        "eventPage.js"
+                    ],
+                    "persistent": true
+                },
+            }
+
+            // v3 manifest
+            {
+            	"background": {
+                "service_worker": "background.js"
+              },
+            }
+            // background.js
+            try {
+                importScripts("libs/OmnibugSettings.js", "libs/OmnibugPort.js", "providers.js", "eventPage.js");
+            } catch (e) {
+                console.log(e);
+            }
+            ```
+
+    - browser_action → action 등 key 명칭 변경.
+
+## web ↔ chrome browser 통신
+
+![웹 - 브라우저 통신 이미지](/static/images/blog/chrome-extension/chrome-extension.png)
+
+- web ↔ content-script 주입(window listener로 캐치 후 chrome runtime에 주입) ↔ chrome runtime 통신
+- chrome runtime 주입되는 메시지로 ↔ content-script / background / devtools 통신.
+- background가 브라우저 전체를 공유하기 때문에 chrome runtime 최적화 관리가 필요
+  - tabId를 이용해서 connect할 tabId를 정하는데 이건 좀더 연구가 필요
+    - recoilizer의 경우 connection를 storage에 저장하는 방법으로 connection을 설정하는듯.
+    - omnibug도 유사한 방법으로 devtools tab에 해당하는 id에서만 event listener를 사용하도록 setting.
+
+## Example (~~chrome-extension branch에서 확인가능~~ -> 마이그레이션 작업중)
+
+1.  (선택사항). web에서 window.onMessage 정의
+    - action, payload 등 구조 설계 필요.
+2.  content-script에 web event Listener 정의
+    - 1단계를 선택했다면, content-script에서 window.addEventListener 정의.(recoilizer 방식)
+    - 1단계를 선택하지 않았다면, browser 혹은 현재 tab의 모든 Event를 감지해서 필요한 event만 걸러내어 처리.(Omnibug 방식)
+3.  개발 후 chrome://extensions/ 에서 확장 프로그램 로드
+
+    - recoilizer vs omnibug
+      - recoilizer
+        - web에 sender를 설정하고 extension에서 lintens하는 방식
+        - 불필요한 리소스를 줄일 수 있지만 web에 의존적이라 web에서 정확한 송신 타이밍을 잡기 어려운 경우 데이터의 정합성이 어긋날 수 있음
+          - ex, ga등과 같이 콜백이 필요한 lib의 경우 custom이 어려울 수 있음
+        - 정확한 콜백을 custom 할 수 있지만 web에서 sender logic을 구현해야해서 복잡해질 경우 web에 부담이 갈 수 있음
+      - omnibug
+        - 불특정 event & request를 감지해서 원하는 정보를 filter해 노출
+        - 별도의 프로젝트로 필요한 외부 lib를 직접 가져다 사용하기 때문에 web에 부담을 주지 않고 custom이 가능
+        - 실 적용시 recoilizer 방식을 따를건지, omnibug code를 수정해서 사용할 건지 논의 필요.
+    - 기타 활용방안
+      - storage, cookie, login status 등 개발시 자주사용되는 정보들을 한눈에 가시화하는 Develop tools
+      - sitemap dashbord
+
+## ref
+
+- extension 기초
+  - https://wikidocs.net/160279
+  - https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/devtools-extension
+  - https://carpediem9911.tistory.com/17
+  - https://ohgyun.com/533
+  - https://yscho03.tistory.com/103
+  - https://80000coding.oopy.io/34a2083b-c159-4524-b5f2-750d3ab4fbba
+- chrome api docs: https://developer.chrome.com/docs/extensions/reference/webRequest/
+- omnibug git: https://github.com/MisterPhilip/omnibug
+- recoilize git: https://github.com/open-source-labs/Recoilize
+- v2 → v3 차이
+  - https://projecteli.tistory.com/203
