@@ -1,0 +1,146 @@
+---
+title: 'Compound Component 알아보기'
+date: '2023-12-19'
+tags: ['react', 'design-system', 'design-pattern']
+draft: false
+summary: 'Compound Component 개념을 알아보고 실습해보기.'
+---
+
+## Compound Pattern 이란?
+
+어플리케이션에서 사용하는 컴포넌트들은 서로 종속적으로 쓰이는 경우가 많다. 예를들어 select, dropdown, menu items 등과 같은 컴포넌트 처럼 결합이 강한 컴포넌트의 경우 state, logic 등이 내부 컴포넌트와 함께 사용되기도 한다. Compound Component Pattern은 여러 컴포넌트들을 조합해 공유된 state, logic을 하나의 동작을 할 수 있게 만드는 패턴이다. 이는 컴포넌트의 각자 역할에 맞게 관심사 분리가 가능하고 _**비즈니스 로직과 스타일 요소분리가**_ 가능하다는 점에서 headless 컴포넌트를 개발하는데 유용하게 사용된다.
+
+    - ### headless 컴포넌트란?
+        -   _**스타일이 없이 ui의 기능만을 구현한**_ ui component이다. 대표적으로 [HeadlessUI](https://headlessui.com/)가 있다. 마크업과 스타일 라이브러리에 구애받지 않는다는 장접이 있지만, 이 장점이 마크업과 스타일을 추가 설정해야한다는 단점으로 그대로 작용하기도 한다. 잦은 스타일 변경과 다수의 다른 디자인의 프로젝트를 제작해야되는 상황이라면 headless 컴포넌트가 유리할 수 있다.
+
+## Context API를 사용한 컴파운드 컴포넌트 예제.
+
+    - 아래 image list[[를 보여주고 우측위 toggle 버튼 클릭시 edit/delete menu list 가 노출되는 예제를 살펴보자.([open sandbox](https://codesandbox.io/p/sandbox/provider-pattern-2-ck29r))
+    ![Context api 예제](/static/images/blog/compound_component/flyout.png)
+    - 컴포넌트 구성
+        - FlyOut: toggle, list를 감싼 Wrapper.
+        - Toggle: menu list open/close를 위한 버튼.
+        - List: menu 항목.
+
+    - 컴포넌트 세부 설명
+        - FlyOut
+            - 컴포넌트 전체의 state를 유지하는 부모 컴포넌트. FlyOutProvider Context를 이용해 하위 자식 컴포넌트에 필요한 state(open, toggle)를 리턴.
+            ```typescript
+            // FlyOut.tsx
+            const FlyOutContext = createContext();
+
+            function FlyOut(props) {
+                const [open, toggle] = useState(false);
+
+                return (
+                    <FlyOutContext.Provider value={{ open, toggle }}>
+                    {props.children}
+                    </FlyOutContext.Provider>
+                );
+            }
+            ```
+        - Toggle
+            - 사용자가 클릭시 menu list를 open/close 수행하는 컴포넌트.
+            ```typescript
+            // Toogle.tsx
+            function Toggle() {
+                const { open, toggle } = useContext(FlyOutContext);
+
+                return (
+                    <div onClick={() => toggle(!open)}>
+                        <Icon />
+                    </div>
+                );
+            }
+            ```
+            - 상기 컴포넌트가 _**FlyOutContext에 접근하기 위해선, FlyOut의 하위 컴포넌트로 설정해주는**_ 작업 필요하다. 따라서 FlyOut 컴포넌트에 Toggle 컴포넌트를 자식으로 할당해주자.
+            ```typescript
+            // FlyOut.tsx
+            const FlyOutContext = createContext();
+
+            function FlyOut(props){
+                ...
+            }
+
+            FlyOut.Toggle = Toggle;
+            ```
+        - List, item
+            - Toggle open시 노출되는 menu List와 item 컴포넌트.
+            ```typescript
+            // List.tsx
+            function List({ children }) {
+                const { open } = React.useContext(FlyOutContext);
+                return open && <ul>{children}</ul>;
+            }
+
+            // Item.tsx
+            function Item({ children }) {
+               return <li>{children}</li>;
+            }
+            ```
+            - Toggle과 동일하게 FlyOutContext에 접근하기 위해 FlyOut의 하위 컴포넌트로 설정.
+            ```typescript
+            // FlyOut.tsx
+            const FlyOutContext = createContext();
+
+            function FlyOut(props){
+                ...
+            }
+
+            FlyOut.Toggle = Toggle;
+            FlyOut.List = List;
+            FlyOut.Item = Item;
+            ```
+
+    - Flyout, Toggle, List, Item을 조합해 FlyOutMenu 만들기.
+        - 위 예시로 만든 FlyOut, Toggle, List를 조합해서 새로운 하나의 컴포넌트를 만들 수 있다. 이럴게 구성 요소들을 조함해 만드는 방식이 컴파운드 패턴이다.
+        ```typescript
+        // FlyOutMenu.tsx
+        import React from "react";
+        import { FlyOut } from "./FlyOut";
+
+        export default function FlyoutMenu() {
+        return (
+            <FlyOut>
+                <FlyOut.Toggle />
+                <FlyOut.List>
+                    <FlyOut.Item>Edit</FlyOut.Item>
+                    <FlyOut.Item>Delete</FlyOut.Item>
+                </FlyOut.List>
+            </FlyOut>
+        );
+        }
+        ```
+        - 위 예시에서 html 기본 tag(div, li, ul)만 사용하고 따로 스타일을 지정하지 않은채 비즈니스 로직만으로 컴포넌트를 구현하였다. _FlyOut 컴포넌트를 사용하는 쪽에서 스타일을 지정할 수 있도록 추가 개발을 하면, 비즈니스 로직과 스타일이 완전히 분리된 headless 컴포넌트가 된다._
+        ```typescript
+        // example. tailwind
+        import React from "react";
+        import { FlyOut } from "./FlyOut";
+
+        export default function FlyoutMenu() {
+        return (
+            <FlyOut className='tb-5 mt-2'>
+                <FlyOut.Toggle className='text-sb'/>
+                <FlyOut.List className='flex-col'>
+                    <FlyOut.Item className='red'>Edit</FlyOut.Item>
+                    <FlyOut.Item className='blue'>Delete</FlyOut.Item>
+                </FlyOut.List>
+            </FlyOut>
+        );
+        }
+        ```
+
+## 장점
+
+    - 컴포넌트 내부의 상태가 컴포넌트를 사용하는 쪽과 분리되므로 관리 포인트가 줄어듦.
+    - 하위 요소를 선택적으로 가져와 조합하기 때문에 경량화가 가능.
+
+## 단점
+
+    - 상위 요소에 설정된하위 요소만 state를 공유하기 때문에, 다른 구성 요소에 래핑 할 수 없음.
+    - 코드의 재활용 측면을 염두해둔 패턴이라, 단일 목적으로 쓰이는 컴포넌트의 경우에는 오히려 비효율 발생.
+
+## ref
+
+- [blog](https://www.patterns.dev/react/compound-pattern)
+- [react docs](https://react.dev/reference/react/useContext)
