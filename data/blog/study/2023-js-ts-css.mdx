@@ -1,0 +1,263 @@
+---
+title: '2023 JS, TS, CSS'
+date: '2023-07-19'
+tags: ['javascript', 'markdown', 'study']
+draft: false
+summary: '2023 js, css 신규 기능 정리'
+---
+
+## 2023 JS
+
+### Immutability(불변성) 관련 신규 method update
+
+- 여러 method들이 추가가 되었지만, 개인적으로는 Immutability에 관련된 method들이 눈에 띄었다.
+- Array.prototype.toReversed(), Array.prototype.toSorted()
+
+  - reverse() vs toReversed()
+
+    - reverse()
+      - 원본 데이터를 참조 & 반환.
+      - 역순 로직을 수행하기 때문에 원본 데이터도 수정이 이루어짐.
+    - toReversed()
+      - 역순 전환된 새로운 Array를 반환.
+      - 원본 데이터 유지.
+    - Array reverse 구현 방식.
+
+      ```jsx
+      // reverse()
+      // 불변성을 유지하기 위해 결과물을 담을 reversedArray를 생성 한 후,
+      // 원본 array를 asign 하고 역순.
+      const array = [0, 1, 2, 3];
+      const reversedArray = [...array];
+      reversedArray.reverse();
+
+      // toReversed()
+      const array = [0, 1, 2, 3];
+      const reversedArray = array.toReversed();
+      console.log(array); // [0, 1, 2, 3]
+      console.log(reversedArray); // [3, 2, 1, 0]
+      ```
+
+  - sort() vs toSorted()
+
+    - sort()
+      - 원본 데이터를 참조 & 반환.
+      - 역순 로직을 수행하기 때문에 원본 데이터도 수정이 이루어짐.
+    - toSorted()
+
+      - 역순 전환된 새로운 Array를 반환.
+      - 원본 데이터 유지.
+      - Array sort 구현 방식.
+
+      ```jsx
+      // sort()
+      // 불변성을 유지하기 위해 결과물을 담을 sortedArray를 생성 한 후,
+      // 원본 array를 asign 하고 정렬.
+      const array = [0, 1, 2, 3];
+      const sortedArray = [...array];
+      sortedArray.sort((a, b) => b - a);
+
+      // toReversed()
+      const array = [0, 1, 2, 3];
+      const sortedArray = array.toSorted((a, b) => b - a);
+      console.log(array); // [0, 1, 2, 3]
+      console.log(sortedArray); // [3, 2, 1, 0]
+      ```
+
+- Array.prototype.with()
+
+  - array 단일 요소 변경 후, 새로운 array를 반환
+
+  - 원본 데이터 유지.
+  - Array with 구현 방식.
+
+  ```jsx
+  // 기존
+  // 불변성을 유지하기 위해 결과물을 담을 changedArray를 생성 한 후,
+  // 원본 array를 asign 하고 역순.
+  const array = [0, 1, 2, 3];
+  const changedArray = [...array];
+  changedArray[2] = 99;
+  console.log(changedArray); // [0, 1, 99, 3]
+
+  // toChanged()
+  const array = [0, 1, 2, 3];
+  const changedArray = array.with(2, 99);
+  console.log(array); // [0, 1, 2, 3]
+  console.log(changedArray); // [0, 1, 99, 3]
+  ```
+
+- Array.prototype.findLast(), Array.prototype.findLastIndex()
+
+  - find(), findIndex()와 사용법이 동일하며 마지막 item & index를 반환.
+
+- Array.prototype.toSpliced()
+
+  - array 요소 분리 후, 새로운 array를 반환
+
+  - 원본 데이터 유지.
+  - Array splice 구현 방식.
+
+  ```jsx
+  // splice()
+  // 불변성을 유지하기 위해 결과물을 담을 changedArray를 생성 한 후,
+  // 원본 array를 asign 하고 역순.
+  const array = [0, 1, 2, 3];
+  const splicedArray = [...array];
+  const result = splicedArray.splice(0, 2, ...[4, 5]);
+  console.log(splicedArray); // [2, 3, 4, 5]
+
+  // toReversed()
+  const array = [0, 1, 2, 3];
+  const splicedArray = array.toSpliced(0, 2, ...[4, 5]);
+  console.log(array); // [0, 1, 2, 3]
+  console.log(splicedArray); // [2, 3, 4, 5]
+  ```
+
+## 번외. 2022 JS
+
+- await without async
+
+  - top level await
+    - async 없이 await 사용 가능.
+  - error cause
+
+    - Error 객체의 구체화.
+
+      ```jsx
+      // before
+      new Error('무슨 무슨 이유로 실패햇슴다');
+
+      // after
+      new Error('무슨 에러임다', { cause: '이게 원인인거 같슴다.' });
+      ```
+
+  - at()
+
+    - array[x] 와 거의 유사한 기능.
+
+      ```jsx
+      const array = ['a', 'b', 'c', 'd', 'e'];
+
+      // array[x]와 차이점. 뒤로 검색 가능
+      array.at(-1); // 'e'
+      ```
+
+  - class private field, static
+
+    - oop class의 private와 동일한 기능.
+    - constructor에서 선언하지 않아도 가능.
+    - field 앞에 # or private을 붙이면 됨.
+
+      ```jsx
+      class TestClass {
+          #privateField = 'Hi';
+
+          private privateFnc = () => 'HiHi';
+      }
+
+      // static 이전 구현 방식.
+      class TestClass {
+          ...
+      }
+      TestClass.build() {
+          ...
+      }
+
+      // 현재
+      class TestClass {
+          static build() {
+              ...
+          }
+      }
+      ```
+
+## 2023 CSS
+
+### 크로스 브라우징 & 반응형에 대한 해결방법 위주로 업데이트 되었다.
+
+- @supports
+
+  - 브라우저의 기능 지원 여부에 따라 css 분기 가능도록 제공.
+  - not, and, or 연산자 지원.
+  - @supports와 selector 함수는 현재 모든 주요 브라우저에서 지원중.
+
+    ```css
+    // 기본
+    header {
+      display: flex;
+    }
+
+    // grid를 제공하는 브라우저 display 설정.
+    @supports (display: grid) {
+      header {
+        display: grid;
+      }
+    }
+
+    // not 연산자 활용
+    @supports not (display: grid) {
+      header {
+        display: flex;
+      }
+    }
+
+    // selector 활용
+    @supports selector(:first-child) {
+      li:first-child {
+        color: red;
+      }
+    }
+    ```
+
+- @property
+
+  - css props를 변수화.
+  - 장점이자 단점은 전역으로 선언됨.
+  - css in js를 사용하는 프로젝트에선 실용성이 떨어짐.
+
+    ```css
+    @property --primaryColor {
+    	syntax: "<color>";
+        initial-value: red;
+        inherits: false;
+    }
+
+    .link {
+    	color: var(--primaryColor);	//red
+    }
+
+    .link:hover {
+    	--primaryColor: blue;	// blue
+    }
+
+    .link:first-child:hover {
+    	--primaryColor: false;	// red
+    }
+    ```
+
+- :nth-child( x of selector) of selector
+
+  - selector의 조건에 해당하는 child를 선택.
+  - selector 자체를 지양하는 현재 트렌트에서 실용성이 낮음.
+
+    ```css
+    <li></li>
+    <li class="link"></li> // a
+    <li></li>
+    <li></li>
+    <li class="link"></li> // b
+    <li></li>
+
+    :nth-child(2) .link {} // a를 선택
+    :nth-child(2 of .link) {} // b를 선택
+    ```
+
+## ref
+
+- [mdn docs | Array.prototype.toReversed()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed)
+- [mdn docs | Array.prototype.toSorted()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted)
+- [mdn docs | Array.prototype.with()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/with)
+- [mdn docs | Array.prototype.toSpliced()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSpliced)
+- [mdn docs | @supports](https://developer.mozilla.org/ko/docs/Web/CSS/@supports)
+- [mdn docs | @property](https://developer.mozilla.org/en-US/docs/Web/CSS/@property)
