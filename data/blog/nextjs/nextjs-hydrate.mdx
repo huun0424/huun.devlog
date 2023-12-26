@@ -1,0 +1,52 @@
+---
+title: 'NextJS의 Hydrate'
+date: '2023-12-10'
+tags: ['web', 'nextjs']
+draft: false
+summary: 'Hydrate란 무엇인지 알아보고 Next.js에서 어떤 방식으로 동작하는지 알아보자.'
+---
+
+## Hydrate란?
+
+SSR(Server Side Rendering), SSG(Static Site Generation)에서 사용되는 개념이다. SSR의 경우 pre-rendering을 통해 완성된 html과 번들링된 js 파일을 클라이언트(브라우저)에게 전송한다. 클라이언트에 전송된 html은 html dom으로 랜더링되어 ui는 먼저 볼 수 있지만, 이벤트 등과같은 js 기능들은 정상 동작이 하지 않는 상태이다. 이때, 클라이언트에서 html dom이 재랜더링 되며 html 각 요소와 번들링된 js의 코드를 매칭하는데 이것을 hydrate라고 한다. 즉, _**hydrate는 html 코드와 js코드를 서로 매칭 시키는 과정을 말한다.**_
+
+## NextJS의 SSR, SSG에서 화면을 보여주는 과정
+
+![ssr, ssg 화면 노출 과정](/static/images/blog/nextjs_hydrate/nextjs-hydrate.png)
+
+### 1. Pre-Rendering
+
+- Next.js는 사전에 서버단에서 js 기능을 제외한 껍데기인 html을 만들어 놓는데 이것을 Pre-Rendering이라고 함.
+  - React의 경우 root body에 js파일을 실행해 주입 시키는 형태라 seo에는 불리함.
+  - 단, react-dom의 hydrateRoot(구버전)을 통해 hydrate 과정을 구현할 수 있는데 _React의 hydrate는 별도 포스트 작성중._
+- Next.js에서 기보적으로 모든 페이지는 Pre-Rendering 과정을 가짐.
+- 이용자가 웹 페이지 접근시 Pre-Rendering html이 화면에 노출되며 이때 _**js 기능은 모두 동작하지 않는 상태.**_
+
+### 2. hydrate
+
+- Pre-Rendering html이 노출된 즉시 React가 번들링 된 js파일이 chunk 단위로 클라이언트에 전송.
+- 클라이언트 사이드에서 js 코드들이 웹 페이지 DOM 요소와 매칭.
+
+## Hydrate의 특징
+
+### 장점
+
+- 웹 페이지의 빠른 로드 제공.
+
+### 단점
+
+- 같은 화면을 두 번 랜더링.
+- 화면에 api 호출이 필요한 영역이 있다면, Pre-Rendering시 api를 호출하고 hydrate 이후에도 호출하게 되므로 중복 요청이 발생할 수 있음.
+  - 응답이 오래 걸리는 요청일 경우 스켈레톤 등의 작업이 필요할 수 있음.
+
+### 그외
+
+- hydrate하기전 페이지 상호작용이 불가능하다는 단점이 있었는데 Reat 18 버전에서 Suspense가 공식 지원되면서 해결.
+  - React의 hydrate 포스트 작성중.
+
+## ref
+
+- blog
+  - [react hydration](https://aboutmonica.com/blog/server-side-rendering-react-hydration-best-practices/)
+  - [nextjs hydrate 1](https://velog.io/@hamjw0122/Next.js-Hydration)
+  - [nextjs hydrate 2](https://helloinyong.tistory.com/315)
