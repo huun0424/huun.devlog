@@ -1,0 +1,101 @@
+---
+title: 'script를 로드하는 세 가지 방법(async, defer)'
+date: '2023-12-23'
+tags: ['web', 'html', 'script']
+draft: false
+summary: 'script를 로드하는 세 가지 방법 1. DOM 마지막에 주입, 2. async, 3. defer'
+---
+
+## 들어가기 앞서
+
+[웹 브라우저의 동작 방식(링크)](https://huun-devlog.vercel.app/blog/web/how-web-browers-works) 포스트의 랜더링 과정에서 보았듯 script 과정을 만나면 DOM 생성 프로세스를 중지하고 js 실행을 수행한다. 일반적으로 html 보다 script의 용량이 크므로 이를 모두 순차적으로 로드 한다면 _**웹 페이지가 노출 되기까지 상당한 시간 지연이**_ 생길 수 있다. 그리고 아래 케이스 처럼 _**DOM 접근이 필요한 script가 존재 할 경우 예상치 못한 사이드 이펙트가 발생할**_ 수 있다.
+
+```html
+<script>
+  // `null` 의 `innerHTML` 에 접근할 수 없으므로 에러가 발생합니다.
+  console.log(document.getElementById('hello').innerHTML);
+</script>
+
+<div id="hello">안녕하세요</div>
+
+<script>
+  // `안녕하세요` 가 출력됩니다.
+  console.log(document.getElementById('hello').innerHTML);
+</script>
+```
+
+script를 로드하기 위해 주로 쓰이는 세 가지 방식을 알아보고 이런 문제점을 방지하기 위한 방법을 학습하자.
+
+## script를 로드하는 세 가지 방법
+
+```html
+<!-- 1. default -->
+<script src="./script.js"></script>
+
+<!-- 2. async 적용 -->
+<script src="./script.js" async></script>
+
+<!-- 3. defer 적용 -->
+<script src="./script.js" defer></script>
+```
+
+![default | async | defer 로드 순서도](/static/images/blog/three-ways-load-to-js/three-ways-load-to-js.png)
+
+### 1. default 방식
+
+```html
+<!-- 1. default -->
+<script src="./script.js"></script>
+```
+
+- 가장 기본적인 방식.
+- 일반적으로 html 보다 script의 용량이 크므로 DOM 랜더링에 지연을 줄이고 예상치 못한 사이드 이펙트를 막기 위해 _**DOM body 마지막에 모아서 주입.**_
+
+### 2. async
+
+```html
+<!-- 2. async 적용 -->
+<script src="./script.js" async></script>
+```
+
+- 브라우저는 async 속성이 있는 script는 _**백그라운드에서 다운로드**_
+  - 웹 페이지 로드할 때 html 파서가 해당 속성이 설정된 script를 만나더라도 _**DOM 랜더링을 멈추지 않음.**_
+- script 실행 시점 : _**script 로드가 완료 되자마자 실행**_
+
+  - 다수개의 script 로드시 특정 script가 상위에 선언되었더라도 용량이 적은 script가 먼저 로드 될 경우 선실행 되므로 script _**실행 순서를 알 수 없음.**_
+
+  ```html
+  <!-- 다운로드 걸리는 시간: 10s -->
+  <script src="./a.js" async></script>
+  <!-- 다운로드 걸리는 시간: 1s -->
+  <script src="./b.js" async></script>
+  <!-- 다운로드 걸리는 시간: 5s -->
+  <script src="./c.js" async></script>
+
+  <!-- script 실행 시점: b - a - c -->
+  ```
+
+### 3. defer
+
+```html
+<!-- 3. defer 적용 -->
+<script src="./script.js" defer></script>
+```
+
+- 브라우저는 defer 속성이 있는 script는 _**백그라운드에서 다운로드**_
+  - 웹 페이지 로드할 때 html 파서가 해당 속성이 설정된 script를 만나더라도 _**DOM 랜더링을 멈추지 않음.**_
+- script 실행 시점 : _**DOM이 준비된 이후 선언된 순서대로 실행**_
+
+## async vs defer
+
+- 둘 다 백그라운드에서 로드되기 때문에 _**DOM 랜더링을 멈추지 않음.**_
+- async는 DOM에 직접 접근하지 않고, 실행 순서가 보장되지 않기 때문에 다른 script에 의존적이지 않은 script를 독립적으로 실행할때 효과적.
+  - ex. google analytics
+- defer는 DOM에 접근해야 하거나, 다른 script에 의존적인 script라 실행 순서가 보장 되어야 할 경우 사용하면 효과적.
+
+## ref
+
+- docs
+  - [javascript.info](https://ko.javascript.info/script-async-defer)
+- blog
+  - [재그지그 블로그](https://wormwlrm.github.io/2021/03/01/Async-Defer-Attributes-of-Script-Tag.html)
