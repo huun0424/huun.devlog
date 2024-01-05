@@ -1,0 +1,82 @@
+---
+title: 'javascript의 eventloop'
+date: '2023-12-28'
+tags: ['web', 'javascript', 'script']
+draft: false
+summary: 'javascript의 eventloop에 대해서 알아보자.'
+---
+
+## eventloop란?
+
+- javascript가 수행되는 환경의 특징에 대해 고민해볼 필요가 있다. javascript는 비동기로 동작 가능하며, 이로인해 동시에 많은 작업을 수행 가능하다. 하지만 javascript는 _**단일 스레드 기반의 언어이다.**_ javascript는 기본적으로 한 번에 한 가지 일만 할 수 있다. 이는 즉, javascript를 실행하는 환경인 _**브라우저 혹은 node.js에서 동시성을 지원해주기**_ 때문에 가능하다. 바로 javascipt에서 _**동시성을 지원하기 위한 기능이 eventloop**_ 이다.
+
+## browser에서 javascript가 실행되는 원리
+
+![eventloop structure](/static/images/blog/what-is-eventloop/eventloop.png)
+
+### browser 구조
+
+- js 엔진
+  - memory heap: 메모리 할당을 담당.
+  - call stack: 코드가 실행될 실행 컨텍스트가 stack 방식(LIFO) 쌓이는 곳.
+- web APIs: DOM, AJAX, Timeout등 비동기 작업을 처리 담당.
+- callback queue: web APIs에서 처리된 비동기 작업을 queue 방식(FIFO)으로 보관. _**microtask가 macrotask보다 우선순위가 높음.**_
+  - microtask queue: process.nextTick, promises, queueMicrotask, mutationObserver 등
+  - macrotask queue: requestAnimationFrame, I/O, UI rendering, timer.
+- eventloop: call stack과 callback queue의 상태를 체크하며 각 상태에 맞는 작업을 수행.
+
+### 동작 순서
+
+- 1. js 엔진의 call stack에서 실행되는 함수가 비동기 작업일 경우 web APIs로 이관.
+- 2. js 엔진이 동기 작업만 수행하는 동안 병렬 작업으로 브라우저 백그라운드에서 web APIs가 비동기 작업을 수행.
+- 3. web APIs에서 완료된 비동기 작업이 callback queue의 각 역할에 맞는 microtask queue와 macrotask queue에 쌓임.
+- 4. eventloop가 call stack과 callback queue의 상태를 체크하며 call stack이 비었을 경우 callback queue에 있는 비동기 작업 결과를 이관.
+  - 이때, microtask queue의 작업이 우선 이관됨.
+- 5. js 엔진의 call stack이 비동기 작업의 결과를 수행.
+
+## example
+
+```javascript
+console.log('start');
+
+setTimeout(function () {
+  console.log('setTimeout');
+}, 0);
+
+Promise.resolve()
+  .then(function () {
+    console.log('promise1');
+  })
+  .then(function () {
+    console.log('promise2');
+  });
+
+const deley = () => {
+  for (let i = 0; i < 100000; i++) {
+    for (let j = 0; j < 100000; j++) {}
+  }
+};
+
+deley();
+console.log('end');
+```
+
+```
+// result
+start
+end
+promise1
+promise2
+setTimeout
+```
+
+## ref
+
+- docs
+  - [mdn - eventloop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop)
+- article
+  - [원문 아티클](https://medium.com/sessionstack-blog/how-does-javascript-actually-work-part-1-b0bacc073cf)
+- blog
+  - [블로그1](https://leo-xee.github.io/JavaScript/eventloop/)
+  - [블로그2](https://blog.toktokhan.dev/t-767eb0fa38f3)
+  - [블로그2](https://velog.io/@seokkitdo/%EC%9D%B4%EB%B2%A4%ED%8A%B8-%EB%A3%A8%ED%94%84%EB%9E%80)
