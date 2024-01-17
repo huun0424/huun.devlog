@@ -157,7 +157,7 @@ summary: 'NextJS page router와 app router가 어떻게 페이지를 생성하�
 
 - 회사에서 진행했던 nextjs 12버전 프로젝트에서는 SSR 구현시 캐싱 관리를 위해 react queryClient를 getServerSideProps / getStaticProps에서 preFetch하는 방식으로 ssr을 구현했었다. 하지만 nextjs 13버전에서 내부 함수로 fetch가 등장하고, 14버전에서는 fetch의 기능이 강화되어 SSR 구현시 react query의 도움 없이도 손쉽게 캐시 관리를 할 수 있게 되었다. 코딩 컨벤션 통일을 위해 [react query로 ssr을 구현(링크)](https://tanstack.com/query/latest/docs/react/guides/advanced-ssr#data-ownership-and-revalidation) 할 수도 있지만, csr이라는 개념이 무색해지고 서버/클라이언트 컴포넌트 라는 개념으로 접근하는 nextjs에서 react query 사용시 클라이언트 컴포넌트로 간주되므로 프레임워크와 언밸런싱이 발생한다. 그리고 아직 react query는 서버 컴포넌트에 대해 완전히 대응 가능한 상태는 아니며, 공식 문서에서도 프레임워크에서 제공하는 fetch tool을 사용할 것을 권장하고 있다.
   > It's hard to give general advice on when it makes sense to pair React Query with Server Components and not. If you are just starting out with a new Server Components app, we suggest you start out with any tools for data fetching your framework provides you with and avoid bringing in React Query until you actually need it. This might be never, and that's fine, use the right tool for the job! [(링크)](https://tanstack.com/query/latest/docs/react/guides/advanced-ssr#data-ownership-and-revalidation)
-- 따라서, csr/ssr 모두를 만족하는 lib가 나타나기 전까지, ***ssr은 nextjs의 fetch를 사용하고, csr에서는 react-query으로 사용하는 투 트랙 방식***이 현재로선 최선이라고 생각한다.
+- 따라서, csr/ssr 모두를 만족하는 lib가 나타나기 전까지, **_ssr은 nextjs의 fetch를 사용하고, csr에서는 react-query으로 사용하는 투 트랙 방식_**이 현재로선 최선이라고 생각한다.
 
 ## ref
 
@@ -166,3 +166,5 @@ summary: 'NextJS page router와 app router가 어떻게 페이지를 생성하�
   - [nextjs app router](https://nextjs.org/docs/app/building-your-application/rendering/server-components)
   - [nextjs app router migrating](https://nextjs.org/docs/app/building-your-application/upgrading/app-router-migration#step-6-migrating-data-fetching-methods)
   - [nextjs app router route segment config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config)
+- blog
+  - [nextjs에서 react query](https://xionwcfm.tistory.com/339)
