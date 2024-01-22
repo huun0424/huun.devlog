@@ -1,0 +1,120 @@
+---
+title: 'React의 client / server component 알아보기'
+date: '2024-01-11'
+tags: ['react', 'NextJS']
+draft: false
+summary: 'React의 client / server component 원리 학습 및 이해하기.'
+---
+
+## RSC(React Server Component) vs RCC(React Client Component)
+
+- React 18버전부터 도입된 개념으로 랜더링 주체에 따라 컴포넌트를 구분한다. Server에서 랜더링 된 후 Client에 전달되면 RSC, 기존의 방식대로 Client에서 js 번들을 다운로드 받은 후 랜더링 되면 RCC 이다. 어느 하나의 방식이 더 좋다기 보단 적재적소에 활용하는 것이 중요하고 NextJS에서는 아래와 같은 [가이드라인](https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns)을 제시하고 있다.
+  ![use rsc rcc](/static/images/blog/react-component-types/rsc-vs-rcc.png)
+- 즉, React 18버전 이후 부터는 \***\*랜더링 환경을 선택 할 수 있으며, 개발 의도에 따라 서버와 클라이언트 양측의 리소스를 선택하여 활용\*\*** 할 수 있게 되었다. 하지만 새롭게 추가된 개념이라 기존의 react 라이브러리와 프레임 워크들은 RSC에 대해 완전한 적용을 하지 못하는 과도기적 상황이라 서비스에 따라 적절한 선택이 필요하다.
+
+## RSC의 동작 방식
+
+    ![rsc work](/static/images/blog/react-component-types/rsc-work.png)
+
+    - 위와 같이 구성된 페이지를 클라이언트에서 요청시, 서버는 컴포넌트 트리를 root에서 부터 실행하며 직렬화된 json 형태로 변환한다.
+
+        ```typescript
+        // 작성한 server component
+        <div style={{backgroundColor:'green'}}>hello world</div>
+
+        // 직렬화 수행
+        React.createElement(div,{style:{backgroundColor:'green'}},"hello world")
+
+        // 직렬화 완료된 컴포넌트를
+        {
+            $$typeof: Symbol(react.element),
+            type: "div",
+            props: { style:{backgroundColor:"green"}, children:"hello world" },
+            ...
+        }
+        ```
+        > 직렬화란?
+        >
+        > 특정 개체를 다른 컴퓨터 환경으로 전송하고 재구성할 수 있는 형태로 바꾸는 과정.
+        >
+        > 예로 JSON.stringify함수가 바로 직렬화를 수행하는 함수이며, JSON.parse가 역직렬화를 수행하는 함수다.
+        >
+        > 모든 객체를 직렬화할 수는 없다. 대표적으로 function은 직렬화가 불가능한 객체다. function이 실행코드와 실행 컨텍스트를 모두 포함하는 개념이기 때문인데, 함수는 자신이 선언된 스코프에 대한 참조를 유지하고, 그 시점의 외부 변수에 대한 참조를 기억하고 있다. js의 클로저가 바로 이런 현상을 가리키는 용어이기도 하다.
+        >
+        > react의 useState와 useEffect 등 상태를 이용한 hook이 클로저를 기반으로 만들어졌기 때문에 직렬화가 불가능하여 __**RSC는 상태를 가질 수 없다.**__
+
+
+    - 하지만 RCC는 함수이기 때문에 직렬화를 할 수 없다. 직렬화 수행중 RCC를 만나게 될 경우, module ref라는 타입을 정의한 후 컴포넌트의 경로를 명시해 직렬화를 우회 한다.
+        ```typescript
+        // client component 직렬화 수행시 결과물 예시
+        {
+            $$typeof: Symbol(react.element),
+            type: {
+                $$typeof: Symbol(react.module.reference),
+                name: "default", //export default를 의미
+                filename: "./src/ClientComponent.js" //파일 경로
+            },
+            props: { children: "some children" },
+        }
+        ```
+
+    - 위 예시대로 nextjs에서 SSR이 진행되었을때 client에서 받게되는 html문서 예시는 다음과 같다.(예시를 위해 필요한 부분만 간소화 한 것이며 실제로는 조금더 복잡하다.)
+        ```html
+        <!DOCTYPE html>
+        <html>
+            <body>
+                {/* SSR 실행의 결과물. 서버 컴포넌트와는 별개로 서버에서 진행됨. */}
+                <div class='green-background' >hello world</div>
+
+                <script src="~/bundle.js" ></script>
+
+                {/* 서버 컴포넌트의 결과물. js 파일이 포함되지 않아 hydrate가 일어나지 않음. */}
+                <script>
+                    self.__next['$ServerComponent'] = {
+                        type: 'div',
+                        props: { style:{backgroundColor:"green"}, children:"hello world" }
+                    }
+                </script>
+            </body>
+        </html>
+        ```
+    - 위 예시에서 보면 알듯이 직렬화된 JSON tree가 script 형태로 클라이언트에게 전송되며 _**해당 컴포넌트는 hydrate를 하지 않는다.**__
+
+    - 이후 전체 직렬화가 완료된 JSON tree를 도식화하면 아래와 같다.
+    ![rsc work](/static/images/blog/react-component-types/rsc-serialize-1.png)
+    - 이 결과물을 stream 형태로 클라이언트가 전달받고, js 번들을 참조하여 RSC와 RCC를 랜더링한다.
+    ![rsc work](/static/images/blog/react-component-types/rsc-serialize-2.png)
+
+## RSC가 html이 아닌 직렬화된 json을 출력하는 이유.
+
+- 기존의 SSR 방식의 경우 완성된 html을 내려주기 때문에 컴포넌트 단위의 변경사항이 발생할 경우에도 전체 페이지를 다시 받아와야 했다. 하지만 RSC는 결과물이 html이 아닌 직렬화된 stream 형태이기 때문에 클라이언트는 이를 이용해 vitualDOM을 생성하고 reconciliation을 통해 기존 화면의 변경된 사항만 선택적으로 반영 가능 하다. 즉, SSR에서 컴포넌트 단위의 refetch가 가능해진다. 이런 특성으로 인해 SSR에서 RSC를 적절히 사용하면 자원 활용면에서 이점을 가져올 수 있다.
+
+## RSC 도입시 장점
+
+### zero bundle serialize
+
+    - rsc에 포함되는 코드는 서버에서 모두 실행된 후 직렬화된 json 형태로 전달되기 때문에 bundle이 필요하지 않다. 기존의 nextjs SSR에선 완성된 html을 받아왔더라도, js 번들의 hydrate 과정을 거치기 때문에 사용자가 인터렉션 가능하기 까지 시간인 TTI(Time To Interactive)는 CSR과 비교했을때 큰 메리트가 없었다. 하지만 번들 사이즈가 줄어들면 TTI가 짧아지므로 개선 효과가 있다.
+
+### 직관적인 data fetch
+
+    - 기존 SSR 구현시 react는 기본적으로 RCC 였기 때문에 서버에서 data fetch한 결과물을 사용하기 위해선 추가 작업이 필요했다. 예를들어 nextjs의 경우 getServerSideProps / getStaticProps라는 내부 함수를 이용해 props drilling으로 data를 전달했다. 하지만 RSC는 실행의 주체가 서버이므로 컴포넌트 내부에서 data fetch가 가능해 직관적인 코드작성이 가능하다.
+
+### Automatic Code Splitting
+
+    - 기존 CSR에서는 React.Lazy / dynamic import 혹은 타 라이브러리로 코드 스플리팅을 이용해야 했다. 하지만, RSC에서 RCC를 import 할 땐 자동으로 dynamic import가 적용되어 편리하다.
+
+## SSR과 Server Component 그리고 NextJS
+
+    - 그렇다면 SSR과 NextJS에서는 Server Component를 어떻게 활용하고 있을까?
+    - 글 작성중.
+
+## ref
+
+- blog
+  - [nextjs - RSC](https://velog.io/@2ast/React-%EC%84%9C%EB%B2%84-%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8React-Server-Component%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0)
+  - [RSC work 원문](https://www.plasmic.app/blog/how-react-server-components-work)
+  - [SC vs CC](https://velog.io/@timosean/Server-component-vs.-Client-Component)
+  - [요즘 IT](https://yozm.wishket.com/magazine/detail/2271/)
+  - [RSC](https://yceffort.kr/2022/01/how-react-server-components-work)
+- docs
+  - [use rsc, rcc](https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns)
