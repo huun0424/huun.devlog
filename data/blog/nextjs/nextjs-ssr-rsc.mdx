@@ -1,0 +1,126 @@
+---
+title: 'NextJS server component와 SSR'
+date: '2024-01-17'
+tags: ['react', 'NextJS']
+draft: false
+summary: 'NextJS server component와 SSR 학습 및 이해하기.'
+---
+
+## React에서 프레임워크를 권장하는 이유
+
+- 리액트 공식문서에서는 프로덕션급의 프로젝트를 진행할 때, nextjs, remix, gatsby 등 react 기반 프레임워크 사용을 권장하고 있다. 프레임워크는 라우팅, 데이터 가져오기, html 생성 등 제품으로 출시하기에 필요한 기능을 쉽게 구현 할 수 있기 때문이다. 특히 신규 도입된 RSC(React Server Component)의 경우 스트림을 생성하거나, ssr 구현시 hydrate 설정, webpack 설정등을 자동으로 처리 해주기 때문에 효율적이다.
+- (하지만, 프레임워크의 효율성에 반대로 단점이 리액트를 이해하는데 단점이 되기도 한다. 따라서 실제 업무에서는 프레임워크를 사용하되 학습을 위해선 플레인 리액트로 공부를 하는게 도움이 된다고 생각한다.)
+
+## NextJS의 SSR
+
+### 기존 page router에서의 SSR
+
+![기존 NextJS의 SSR](/static/images/blog/nextjs-ssr-rsc/nextjs-ssr-rsc-pageroute.png)
+
+- 기존의 page router NextJS의 SSR은 구현 과정.
+  1. 서버에서 페이지의 data fetching.
+  2. 서버에서 페이지의 html을 랜더링.
+  3. 페이지의 html, css, js가 클라이언트에게 전송됨.
+  4. 클라이언트는 상호작용이 없는 화면을 html, css를 이용해 노출.
+  5. 클라이언트에서 js를 hydrate하여 상호작용 가능하도록 페이지를 구성.
+- 상호작용이 불가능한 화면일지라도 빠르게 노출하여 사용자로 하여금 체감 로딩을 개선할 수 있지만, 페이지가 사용자에게 표시되기 전에 서버에서 data fetching이 완료되어야 하므로 1 ~ 3 단계를 거쳐야한다는 문제점이 있었다.
+
+![기존 NextJS의 SSR](/static/images/blog/nextjs-ssr-rsc/nextjs-ssr-rsc-pageroute-2.png)
+
+- 기존의 SSR은 상기 이미지처럼 전체 페이지에 대한 hydrate가 한번에 일어난다.
+
+### app router에서의 SSR 스트리밍
+
+![app router NextJS의 SSR](/static/images/blog/nextjs-ssr-rsc/nextjs-ssr-rss-approute.png)
+
+- NextJS 14버전부터 stable된 app router에서는 기존 SSR을 보완하기 위해 data fetch 별로 페이지를 구성하는 스트리밍을 지원한다. React의 suspense를 이용해 1 ~ 3단계의 시간을 줄이는 것이 가능해졌다.
+
+![app router NextJS의 SSR](/static/images/blog/nextjs-ssr-rsc/nextjs-ssr-rss-approute-2.png)
+
+- app router NextJS의 SSR 구현 과정.
+  1. 서버에서 페이지의 data fetching 전 suspense로 구현된 html 랜더링.
+  2. 페이지의 html, css, js가 클라이언트에게 전송됨.
+  3. 클라이언트는 상호작용이 없는 화면을 html, css를 이용해 노출.
+  4. 클라이언트에서 js를 hydrate하여 상호작용 가능하도록 페이지를 구성.
+  5. 각 data fetching 완료시 수정된 html, css, js파일을 전송 후 3 ~ 4 과정을 반복.
+     - 이 과정에서 hydrate가 일어날 때 전체 페이지 랜더링이 아닌, 수정된 컴포넌트에 해당하는 영역만 재랜더링.
+
+![app router NextJS의 SSR](/static/images/blog/nextjs-ssr-rsc/nextjs-ssr-rss-approute-3.png)
+
+- app router의 SSR은 상기 이미지처럼 병렬적으로 실행되는 data fetching에 따라 각 영역별로 여러번 hydrate가 일어난다.
+- 이를 통해 사용자에게 보다 빠른 페이지 로딩을 제공 할 수 있다.
+
+## NextJS에서 RSC를 사용하는 이유?
+
+### 빠른 페이지 노출
+
+- SSR과 RSC를 모두 사용하는 이유는 RSC 장점[(React의 client / server component 알아보기 참고)](http://localhost:3000/blog/react/component-types)을 통해 빠른 페이지 노출이 가능하기 때문이다.
+- React 18버전과 NextJS 14버전 모두 이전의 버전에 비해 많은 변화가 있었다. 그리고 변화를 통한 목표는 **_사용자에게 보다 빠르게 페이지를 노출 하는것_**이고 그를 위해 컴포넌트 단위의 refetch가 가능하도록 도입한것이 RSC와 app router가 아닐까 생각한다. SSR의 js파일은 크기에 비해 hydrate 과정에서 소비되는 시간이 오래 걸린다. 하지만, RSC는 최종 결과물이 html이 아닌 직렬화된 스트림 데이터 형식이기 때문에, hydrate가 일어나지 않는다. 그리고 직렬화된 데이터만 JSON으로 전송되므로 zero bundle size가 가능해 js 번들 사이즈를 줄이는 것이 가능하다.
+
+### NextJS SSR에서 RSC 사용 예제.
+
+```typescript
+// Tweets.server.js
+import { fetch } from 'react-fetch' // React's Suspense-aware fetch()
+import Tweet from './Tweet.client'
+export default function Tweets() {
+  const tweets = fetch(`/tweets`).json()
+  return (
+    <ul>
+      {tweets.slice(0, 2).map((tweet) => (
+        <li>
+          <Tweet tweet={tweet} />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Tweet.client.js
+export default function Tweet({ tweet }) {
+  return <div onClick={() => alert(`Written by ${tweet.username}`)}>{tweet.body}</div>
+}
+
+// OuterServerComponent.server.js
+export default function OuterServerComponent() {
+  return (
+    <ClientComponent>
+      <ServerComponent />
+      <Suspense fallback={'Loading tweets...'}>
+        <Tweets />
+      </Suspense>
+    </ClientComponent>
+  )
+}
+```
+
+```json
+// client가 받은 rsc stream
+M1:{"id":"./src/ClientComponent.client.js","chunks":["client1"],"name":""}
+S2:"react.suspense"
+J0:["$","@1",null,{"children":[["$","span",null,{"children":"Hello from server land"}],["$","$2",null,{"fallback":"Loading tweets...","children":"@3"}]]}]
+M4:{"id":"./src/Tweet.client.js","chunks":["client8"],"name":""}
+J3:["$","ul",null,{"children":[["$","li",null,{"children":["$","@4",null,{"tweet":{...}}}]}],["$","li",null,{"children":["$","@4",null,{"tweet":{...}}}]}]]}]
+```
+
+- 위 nextjs 코드를 실행시 클라이언트에서는 아래의 RSC 스트림 데이터를 전달 받는다. 각 스트림 데이터에서는 suspense, 참조할 children 등 화면 노출에 대한 정보를 가지고 있다.
+- data fetch가 완료되면 “@3”이 “J3”로 대체되고, “J3”는 참조하고 있던 “M4”에 해당하는 컴포넌트에 data를 넘겨주면서 화면에 보여지게 된다. 따라서 RSC를 React.Suspense와 함께 사용한다면 모든 데이터를 기다릴 필요 없이 먼저 그릴 수 있는 부분을 반영하여 뷰를 로드한 뒤, data fetch가 완료되면 그 결과가 즉각적으로 스트림에 반영된다.
+
+### 한계점.
+
+- 기존의 방식과 상당히 다른 패턴으로 개발 필요.
+  - 기존엔 공통으로 사용되는 요소를 묶어서 추상화하는 것을 목적으로 구조를 설계 했지만, rsc는 많은 변화가 있었기 때문에 데이터 조회의 주체에 따라 서버/클라이언트 컴포넌트로 나누어 지기 때문에 기존과 구조 설계가 많이 다름.
+  - 이에따라 next js에서는 다음과 같은 가이드를 제공하고 있다. [nextjs 프로젝트 구조](https://nextjs.org/docs/app/building-your-application/routing/colocation)
+- 사용이 제한적.
+  - 직렬화 가능한 요소만 사용가능하므로 state, event 등을 가질 수 없고, 필요시 RCC로 감싸 주어야함.
+  - 기존까지 사용되던 library는 대부분 직렬화를 고려하지 않고 RCC를 고려해 구현되었기 때문에 사용이 불가능하거나 추가 설정등의 작업이 필요 할 수 있다.(ex. react-query)
+- 러닝 커브.
+  - 상기 사항들로 인해 기존 React, NextJS에 비해서 알아야 할 것들이 늘어나 적지 않은 러닝커브가 발생 할 수 있음.
+
+## ref
+
+- docs
+  - [react-docs](https://react.dev/learn/start-a-new-react-project)
+- blog
+  - [nextjs-rsc](https://velog.io/@2ast/React-%EC%84%9C%EB%B2%84-%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8React-Server-Component%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0#rsc-vs-ssrserver-side-rendering)
+  - [react server component](https://velog.io/@goyoung2/RSC-RHF-Zod)
