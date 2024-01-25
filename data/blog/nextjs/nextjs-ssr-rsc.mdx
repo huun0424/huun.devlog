@@ -1,5 +1,5 @@
 ---
-title: 'NextJS server component와 SSR'
+title: 'NextJS SSR과 Server Component'
 date: '2024-01-17'
 tags: ['react', 'NextJS']
 draft: false
@@ -54,7 +54,7 @@ summary: 'NextJS server component와 SSR 학습 및 이해하기.'
 
 ### 빠른 페이지 노출
 
-- SSR과 RSC를 모두 사용하는 이유는 RSC 장점[(React의 client / server component 알아보기 참고)](http://localhost:3000/blog/react/component-types)을 통해 빠른 페이지 노출이 가능하기 때문이다.
+- SSR과 RSC를 모두 사용하는 이유는 RSC 장점[(React의 client / server component 알아보기 참고)](https://huun-devlog.vercel.app/blog/react/component-types)을 통해 빠른 페이지 노출이 가능하기 때문이다.
 - React 18버전과 NextJS 14버전 모두 이전의 버전에 비해 많은 변화가 있었다. 그리고 변화를 통한 목표는 **_사용자에게 보다 빠르게 페이지를 노출 하는것_**이고 그를 위해 컴포넌트 단위의 refetch가 가능하도록 도입한것이 RSC와 app router가 아닐까 생각한다. SSR의 js파일은 크기에 비해 hydrate 과정에서 소비되는 시간이 오래 걸린다. 하지만, RSC는 최종 결과물이 html이 아닌 직렬화된 스트림 데이터 형식이기 때문에, hydrate가 일어나지 않는다. 그리고 직렬화된 데이터만 JSON으로 전송되므로 zero bundle size가 가능해 js 번들 사이즈를 줄이는 것이 가능하다.
 
 ### NextJS SSR에서 RSC 사용 예제.
