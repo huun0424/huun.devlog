@@ -1,0 +1,137 @@
+---
+title: 'React의 children'
+date: '2024-02-15'
+tags: ['react', 'NextJS']
+draft: false
+summary: 'React의 children에 대한 학습.'
+---
+
+## RSC(React Server Component) 내부의 RCC(React Client Component)는 RSC를 직접 리턴 할 수 없다
+
+[React의 client / server component 알아보기](https://huun-devlog.vercel.app/blog/react/component-types) 에서 보앗듯 RSC는 직렬화가 가능한 데이터만 구현할 수 있다는 제약 사항을 가진다. 그렇기 때문에 RCC는 직접 RSC를 리턴 할 수 없으며, 필요시 **_children props 형태_**로 넘겨주어야 한다. 이런 제약 사항때문에 NextJS app router에서 recoil, react-query 등 외부 library의 provider를 전역으로 설정할 때, RSC로 강제하는 root layout에 직접적으로 사용하지 못하기 때문에 children props 형태로 구현해야만 한다.
+
+```typescript
+// recoilProvider.tsx
+'use client'
+
+import { RecoilRoot } from 'recoil'
+export default function RecoilProvider({
+children,
+}: {
+children: React.ReactNode
+}) {
+return <RecoilRoot>{children}</RecoilRoot>
+}
+```
+
+```typescript
+// app/layout.tsx
+import RecoilProvider from '../recoilRootProvider'
+
+export default function RootLayout({
+children,
+}: {
+children: React.ReactNode
+}) {
+return (
+    <html lang="en">
+    <body>
+        <RecoilProvider>{children}</RecoilProvider>
+    </body>
+    </html>
+)
+}
+```
+
+react에서 component를 직접 리턴 하는 것과 children props로 구현하는 것의 차이에 대해 의문을 가졌고 이후는 그 이유에 대한 내용이다.
+
+## React의 JSX
+
+```typescript
+// 1. Child를 직접 return 하는 패턴
+const Parent = () =>{
+	return <div><Child/></div>
+}
+
+const Container = () =>{
+	return <Parent />
+}
+
+// 2. Child를 children props 형태로 return 하는 패턴
+const Parent = ({children}) =>{
+	return <div>{children}</div>
+}
+
+const Container = () =>{
+	return <Parent>
+      <Child />
+    </Parent>
+}
+```
+
+위 두 코드는 같은 화면을 노출하기 때문에 언뜻 보기엔 같은 의미를 가진 코드로 보일 수 있다. 하지만 구현되는 과정은 다르기 때문에 랜더링 측면에서도 차이가 있다. jsx는 html tag의 형태를 한 **_javascript_**코드 이다.
+
+```typescript
+const element = createElement(type, props, ...children);
+```
+
+실제로 jsx코드는 위와 같은 javascript 코드로 구현 된다. 여기서 주목할 점은 세 번째 매개변수로 children이 사용된다는 점이다. 두 케이스를 creatElement javascript 구현식으로 비교 하면
+
+```typescript
+// jsx
+// 1. Child를 직접 return 하는 패턴
+const Container = () =>{
+	return <Parent />
+};
+
+// jsx -> javascript code
+const Parent = React.createElement('div', null, Child);
+const Container = React.createElement(Parent, null, null);
+
+// 2. Child를 children props 형태로 return 하는 패턴
+const Container = () =>{
+	return <Parent>
+      <Child />
+    </Parent>
+};
+
+// 동일한 의미로 아래 형태로 표현 가능.
+const Container = () =>{
+	return <Parent children={<Child />} />
+}
+
+// jsx -> javascript code
+const Container = React.createElement(Parent, null, Child);
+```
+
+로 Container가 구현된다. 1번 케이스에서 Child는 Parent 내부에 선언이 되고, 2번 케이스에서는 Container에 선언이 된다. Parent가 RCC라면 직렬화가 불가능하기 때문에 Parent 내부에 선언된 1번 케이스의 Child도 직렬화가 불가능하다.
+
+반면 2번 케이스의 경우 Child가 Parent 내부에서 사용되는 것이 아닌, Parent와 같은 레벨의 Container 레벨에서 선언되기 때문에 직렬화가 가능하다. 따라서 RCC 내부의 RCC는 children props를 통해 children의 레벨을 상위로 올릴 수 있고, 그 결과로 RSC를 하위 children으로 우회해서 포함 시킬 수 있는 것으로 보인다.
+
+## 번외. 구조적으로 React memorize 하기.
+
+React.memo로 Parent 컴포넌트를 memorize하면, React는 Parent 내부의 props 값을 비교하여 랜더링 여부를 결정한다. 1번 케이스처럼 Child를 직접 리턴 할 경우, memorize를 위해 React.memo(Child)를 하여야 한다.
+
+```typescript
+// 1. Child를 직접 return 하는 패턴
+const ChildMemo = React.memo(Child);
+
+const Parent = () =>{
+	return <div><ChildMemo/></div>
+}
+
+const Container = () =>{
+	return <Parent />
+}
+```
+
+하지만 2번 케이스의 경우 jsx 코드 상으론 Parent 내부에 Child가 있지만, 실제 Javascript 코드상으론 Child가 Parent의 props가 아닌 Container의 children으로 입력되기 때문에 Parent의 re-render에 영향을 받지 않아 별도의 memorize 작업이 필요하지 않다. 이를 통해 구조적으로 memorize가 가능하다.
+
+## ref
+
+- blog
+  - [nextjs-rsc](https://velog.io/@2ast/React-%EC%84%9C%EB%B2%84-%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8React-Server-Component%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0#rsc-vs-ssrserver-side-rendering)
+  - [react-children](https://velog.io/@2ast/React-children-prop%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0feat.-%EB%A0%8C%EB%8D%94%EB%A7%81-%EC%B5%9C%EC%A0%81%ED%99%94)
+- docs
+  - [use rsc, rcc](https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns)
+  - [react](https://react.dev/reference/react/createElement)
