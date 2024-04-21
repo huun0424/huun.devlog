@@ -1,0 +1,142 @@
+---
+title: 'MFA 구축하기 - 2. 모노레포 패키지 매니저 편'
+date: '2024-04-22'
+tags: ['micro-frontend', 'package-manager', 'yarn berry', 'pnpm', 'turborepo']
+draft: false
+summary: 'MFA(마이크로 프론트엔드 아키텍쳐) 도입해보기 패키지 매니저 편. 모노레포 패키지 매니저의 종류 알아보기 & 선택.'
+---
+
+## 패키지 매니저
+
+프로젝트가 의존하고 있는 패키지를 효과적으로 설치, 관리, 갱신, 삭제 할 수 있도록 도와주는 시스템.
+대표적으로 npm, yarn이 있지만, 모노레포 아키텍쳐에서는 다수의 프로젝트의 의존성에 대해 중복, 사이즈 최적화 등 복합적인 관리가 필요해 그에 따른 추가적인 패키지 매니저 설정이 필요함.
+
+### 패키지 매니저가 필요한 이유 = 모노레포 도입시 고려가 필요한 사항
+
+### branch
+
+- 패키지별 명확한 CI/CD 분리.
+  - 변경된 부분만 개별적으로 배포.
+- 프로젝트별 자유로운 branch 전략.
+
+### 독립적인 환경 제공
+
+- 프로젝트별 자유로운 버전관리.
+- 프로젝트 생성과 의존성 추가의 자유.
+- 패키지별 환경변수 개별 관리.
+- 각 패키지는 독립적이며 서로에게 영향을 주어선 안됨.
+
+### disk space & performance
+
+- monorepo 전체 프로젝트를 모두 clone시 성능 저하가 발생하기 때문에 해결 방법 필요.
+  - 별도의 remote codespace를 두어 로컬에는 필요한 프로젝트만 설치.(github codespace - 비용 발생)
+  - git sparse checkout(git 2.25.0부터 제공)
+
+### 기타
+
+- 코딩 컨벤션을 위해 프로젝트 생성을 위한 가이드 라인(보일러플레이트) 필요.
+
+### 모노레포 의존성 이슈 example
+
+```
+root
+|- node_modules
+|- project1
+	|_package.json
+|- project2
+	|_package.json
+|- project3
+	|_package.json
+|- project4
+	|_package.json
+|- project5
+	|_package.json
+|_ package-lock.json
+```
+
+#### 문제점
+
+- 위와 같은 모노레포 구조에서 package-lock.json이 변경 되지 않았을 경우 설치를 생략하도록 캐시 설정을 했더라도, lockfile은 프로젝트별로 존재하지 않기 때문에 하나의
+  의존성만 변경되더라도 모든 프로젝트의 의존성을 새로 설치하되어 리소스 비효율이 발생. 또한 프로젝트가 늘어날 수록 `node_modules`의 크기가 비대해져 빌드 머신의 disk space 비용이 증가.
+
+#### 해결 방안
+
+- 각 프로젝트의 workspace 별로 `package-lock.json` 역할을 대신할 캐시 키를 소유.
+- `node_modules` 자체의 중복을 최적화 & 압축하여 크기를 줄임.
+
+## 패키지 매니저의 종류
+
+대표적으로 사용되는 두 가지 패키지 매니저를 알아보자.
+
+- yarn berry pnp
+- pnpm
+
+### yarn berry(yarn2)
+
+- typescript 기반으로 작성되어 완전한 type check 가능.
+- Plug'n'Play
+  - 기존의 로컬 `node_module` 폴더 대신 패키지를 캐시 폴더에 저장하고 `.pnp.cjs`파일에 의존성을 기록. `.pnp.cjs`를 통해 패키지가 어떤 라이브러리에 의존하는지, 각 라이브러리가 어디에 위치하는지를 추적.
+- zip file system
+  - yarn pnp 시스템에서 각 의존성을 **zip 아카이브로 관리**하기 때문에 기존 `node_module`은 디렉토리 구조를 생성할 필요가 없음.
+  - 모 서비스 의존성 압축 결과
+    ![화해 의존성 압축 결과](/static/images/blog/mfa/package-manager/yarn-berry-zip.png)
+- 로컬 `node_module` 폴더 방식이 아니기 때문에 새로 저장소를 복사하거나 브랜치를 복사하더라도 `yarn install`생략 할 수 있고, `CI`의 의존성 설치 시간을 대폭 단축 가능.
+- Zero Install
+  - zero install은 yarn berry에만 있는 기술이라기보단 개념에 가까움.
+  - 의존성이 zip 형태로 저장되기 때문에 git에도 올릴 수 있게 되면서, git clone 이후 별도의 설치 없이 바로 사용 가능.
+- 단점
+  - pnpm 대비 러닝커브가 있음.
+  - **의존성 변화에 대한 기록이 `.git/objects` 남게되기 때문에 git history에 지속적인 부하 발생. git history 관리도 가능하지만 이건 오버 엔지니어링이 될 가능성이 있음.**
+  - turborepo 사용시, yarn berry의 pnp모드를 지원하지 않기 때문에 별도 캐시 관리 필요.
+
+### pnpm
+
+- yarn berry 대비 적은 러닝커브
+- 빠른 install 속도
+  - pnpm benchmark 자료
+    ![pnpm benchmark 자료](/static/images/blog/mfa/package-manager/pnpm-benchmark.png)
+- Plug'n'Play(PnP) 지원
+- turborepo와 좋은 시너지. pnpm의 기능들을 fully 지원.
+- content-addressable file store
+  - 전역 저장소에 의존성을 저장하는 방식.
+  - 각각의 의존성 파일에 hash id를 부여해 관리. 중첩된 패키지는 동일한 hash id가 부여되어 중복 설치를 방지.
+  - 의존성 호이스팅으로 인한 팬텀 디펜던시가 발생하지 않음.
+  - 프로젝트마다 `node_modules`폴더에 symbolic link를 만들어 연결하기 때문에 의존성 install을 할 필요가 없음.
+    ![pnpm symlink](/static/images/blog/mfa/package-manager/pnpm-sym-link.png)
+- 단점
+  - 비교적 최신 패키지 매니저라 일부 작동하지 않는 패키지가 있을 수 있음.
+    - but, 일반적으로 많이 쓰이는 패키지는 대부분 지원하기 때문에 큰 이슈는 없을듯.
+  - yarn berry 대비 레퍼런스가 적어 문제 발생 시 해결하기 어렵울 수 있기 때문에 커스터마이징이 적게 필요할 경우 사용하는 것이 좋겠다 생각.
+
+### pnpm을 선택한 이유
+
+- 비교적 적은 러닝커브. 효율적 학습을 위해.
+  - 처음 monorepo를 도입해보기 때문에 좀 더 쉬운 설정으로 구축할 수 있는 pnpm을 선택.
+  - 실제로 사용을 하며 custom이 필요한 사항들을 check 해가며 yarn berry와 비교 예정.
+- turborepo 사용.
+  - yarn berry pnp mode를 지원하지 않아 yarn berry의 nodeLinker를 이용해야하나, pnp mode가 핵심 기술이라 yarn berry를 사용하는 이유가 퇴색됨.
+    - 직접 이슈를 겪진 못했지만, 실제 현업에서 모노레포를 사용중인 선발대 분들의 의견이나 캐싱 관리를 따로 해주어야한다는 점에서 오버 엔지니어링이 되는 부분에 있어서 공감.
+  - 패키지 매니저는 아니지만, 모노레포는 많은 의존성을 관리하기 위한 아키텍쳐인 만큼 빌드 시스템도 도입이 필요하다라고 생각해 함께 사용하는 것으로 결정.
+
+## 이어지는 포스트
+
+- [MFA 환경 구축하기 - 1. 레포지토리 환경]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+- [MFA 환경 구축하기 - 3. 모노레포 turborepo & pnpm 설정(작성중)]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+- [MFA 환경 구축하기 - 4. 모듈 페더레이션(작성 예정)]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+- [MFA 환경 구축하기 - 5. 모듈 페더레이션 심화(작성 예정)]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+
+## ref
+
+- tech blog
+  - [콴다 - 모노레포 시스템 구축](https://blog.mathpresso.com/%ED%8C%80%EC%9B%8C%ED%81%AC-%ED%96%A5%EC%83%81%EC%9D%84-%EC%9C%84%ED%95%9C-%EB%AA%A8%EB%85%B8%EB%A0%88%ED%8F%AC-monorepo-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EA%B5%AC%EC%B6%95-3ae1b0112f1b)
+  - [무신사 - 모노레포](https://medium.com/musinsa-tech/journey-of-a-frontend-monorepo-8f5480b80661)
+  - [네이버 D2 - 모노레포 개념 편](https://d2.naver.com/helloworld/0923884)
+  - [화해 - yarn berry](https://blog.hwahae.co.kr/all/tech/11962)
+  - [AB180 - yarn -> pnpm](https://engineering.ab180.co/stories/yarn-to-pnpm)
+  - [LG UPLUS - 모노레포 구축](https://medium.com/uplusdevu/turborepo-yarn-berry%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-monorepo-%EA%B5%AC%EC%B6%95-%EB%B0%A9%EB%B2%95-e09d58da9fdf)
+- 개인 blog
+  - [모노레포 구축기](https://medium.com/uplusdevu/turborepo-yarn-berry%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-monorepo-%EA%B5%AC%EC%B6%95-%EB%B0%A9%EB%B2%95-e09d58da9fdf)
+  - [모노레포 도구](https://velog.io/@jodheeee/%EB%AA%A8%EB%85%B8%EB%A0%88%ED%8F%AC-%EB%8F%84%EC%9E%85%EA%B8%B02-%EB%8F%84%EA%B5%AC-%EC%84%A0%ED%83%9D-%EB%B0%8F-%EA%B8%B0%EC%B4%88-%EC%85%8B%ED%8C%85yarn-berry)
+  - [패키지 매니저 비교](https://4sii.tistory.com/622)
+  - [turborepo 모노레포 구축](https://dev-scratch.tistory.com/161)
+  - [yarn berry + turborepo](https://enjoydev.life/blog/frontend/8-monorepo)
