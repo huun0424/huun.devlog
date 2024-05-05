@@ -1,0 +1,128 @@
+---
+title: 'MFA 구축하기 - 3. 모노레포 pnpm, turborepo 설치 & 설정'
+date: '2024-05-05'
+tags: ['micro-frontend', 'pnpm', 'turborepo']
+draft: false
+summary: 'MFA(마이크로 프론트엔드 아키텍쳐) 도입해보기 모노레포 pnpm, turborepo 설치 & 설정 편.'
+---
+
+## 들어가기 앞서, Turborepo란?
+
+Vercel이 인수 후 제공하고 있는 rust로 작성된 js, ts 코드 베이스의 모노레포를 위한 증분 번들러 및 빌드 시스템.
+zero configuration을 지향하는 편의성을 강점으로 내세우고 있어, lerna, nx 등 다른 모노레포 도구를 사용할 때 보다 빠르게 개발 환경 구축이 가능.
+모노레포 구축 & 관리에 많은 리소스를 투입하기 어려운 경우 효과적.
+또한 증분 빌드, 빌드 캐싱, 병렬 빌드 등을 지원해 빠른 배포와 작업이 가능.
+
+프로젝트가 의존하고 있는 패키지를 효과적으로 설치, 관리, 갱신, 삭제 할 수 있도록 도와주는 시스템.
+대표적으로 npm, yarn이 있지만, 모노레포 아키텍쳐에서는 다수의 프로젝트의 의존성에 대해 중복, 사이즈 최적화 등 복합적인 관리가 필요해 그에 따른 추가적인 패키지 매니저 설정이 필요함.
+
+## turborepo를 이용한 monorepo
+
+![turborepo 초기 설정](/static/images/blog/mfa/turborepo-n-pnpm/structure.png)
+
+- 이후 내용에서 다루겠지만 코드 공유 방식은 다음과 같다.
+  - domain 간 코드 공유: Module Federation
+    - ex. root#todo - add#toto
+  - domain 과 ui, hook 등 공용 코드 간 공유: packages(내부 공유 코드)
+    - ex. root#todo - packages/add
+- turborepo에선 공용 코드의 경우 npm 외부 패키지 정의방식 보단, 내부 패키지로 apps간 공유를 권장.
+
+## 1. pnpm 설치
+
+```
+// mac
+brew install pnpm
+pnpm setup
+```
+
+- corepack 설치
+  - corepack 이란?
+    - Node.js v16.13 부터 제공하는 패키지 관리자 서브 도구 이며, 호출 시 현재 프로젝트에 대해 구성된 패키지 관리자를 식별하고, 필요한 경우 투명하게 설치하고, 최종적으로 명시적인 사용자 상호 작용 없이 실행하는 지원되는 각 패키지 관리자 에 대해 바이너리 프록시를 노출하는 가능.
+  ```
+  // corepack 설치
+  brew install corepack
+  // corepack pnpm 활성화
+  corepack enable pnpm
+  ```
+  - corepack을 설정 하지 않으면, 프로젝트와 pnpm의 버전이 다를 경우 예상치 못한 이슈가 발생할 가능성이 있다.
+
+## 2. pnpm으로 Turborepo 설치
+
+- 전역 설치
+  ```
+  pnpm install turbo --global
+  ```
+- 저장소별 설치
+  - 실제 프로젝트에서는 다른 개발자와 협업을 해야하고, 초기 프로젝트 세팅 이후 신규 개발 인원 유입 되었을 경우 turbo의 버전이 달라 예상치 못한 동작을 방지 하려면 turborepo 버전을 고정 할 필요가 있다.
+    turbo 저장소 루트에 dev 종속성을 추가 하고, 이 경우 로컬 버전이 우선시 된다.
+  ```
+  pnpm add turbo --save-dev --ignore-workspace-root-check
+  ```
+
+## 3. turborepo를 이용한 monorepo 생성
+
+- turborepo 생성 명령어
+  ```
+  pnpm dlx create-turbo@latest
+  ```
+- 레포지토리 명, 패키지 매니저 선택
+  ![turborepo 초기 설정](/static/images/blog/mfa/turborepo-n-pnpm/create-monorepo.png)
+
+## turborepo directory 구조
+
+![turborepo 초기 설정](/static/images/blog/mfa/turborepo-n-pnpm/directory.png)
+
+- apps: 서비스 도메인별 프로젝트 workspace.
+- packages
+
+  - 공용으로 사용되는 workspace. ex. ui, lint, config, hook 등.
+  - apps workspace에서 packages의 workspace를 symlink로 연결 후 import해서 사용.
+
+    ```json
+    // packages/ui/package.json
+    {
+      ...
+      "name": "@repo/ui"
+      ...
+    }
+
+    // apps/web/package.json
+    {
+      ...
+      "dependencies": {
+        "@repo/ui": "workspace:*" // *을 통해 최신 버전의 package를 참조.
+      }
+      ...
+    }
+    ```
+
+### 알아두면 좋은점
+
+- turborepo에서 package를 내부 symlink로 사용하는 이유
+  - 외부 패키지: 번들로 묶여 패키지 레지스트리로 전송되어 사용. 디자인 시스템, 공유 유틸리티 라이브러리, 오픈 소스 작업에 유용. 하지만 번들링, 버전 관리 및 게시 등 복잡성 존재.
+  - 외부 패키지를 로컬로 사용하기 위해선 상기 작업들을 모두 수행한 뒤 개발 스크립트를 통해 로컬에서 사용가능한 형태로 번들링 되는 과정이 필요함. 하지만 내부 패키지는 게시가 되지 않음으로 관리 측면에서 효과적.
+  - 내부 패키지는 기본적으로 비공개 내부 사용을 위한 패키지 이지만, 외부로 게시할 필요성이 있다면 빠르게 전환 가능.
+    - [내부 패키지 게시하기](https://turbo.build/repo/docs/handbook/publishing-packages)
+
+## turborepo 생성 실습 회고
+
+- yarn berry 에제에 비해 turborepo는 굉장히 간단하게 monorepo 구현이 가능했다. 하지만 간단해진 만큼 제대로 사용하기 위해선 yarn berry로 monorepo를 구축하는걸 비교해가며 turborepo에서 어떻게 구조화 되어있는지 비교할 필요성을 느꼈다. yarn berry로 monorepo 구축하기는 [turborepo docs-monorepo 핸드북](https://turbo.build/repo/docs/handbook/publishing-packages)를 학습한 뒤 따로 포스트를 작성할 예정이다.
+
+## 이어지는 포스트
+
+- [MFA 구축하기 - 1. 레포지토리 환경]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+- [MFA 구축하기 - 2. 모노레포 패키지 매니저 편]('https://huun-devlog.vercel.app/blog/mfa/mfa-package-manager')
+- [MFA 구축하기 - 4. 모듈 페더레이션(작성 예정)]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+- [MFA 구축하기 - 5. 모듈 페더레이션 심화(작성 예정)]('https://huun-devlog.vercel.app/blog/mfa/mfa-repository')
+
+## ref
+
+- docs
+  - [pnpm](https://pnpm.io/ko/)
+  - [turborepo](https://turbo.build/repo/docs/installing)
+- tech blog
+  - [네이버 D2 - 모노레포 개념 편](https://d2.naver.com/helloworld/0923884)
+  - [kimcoder - mfe & webpack module federation](https://www.kimcoder.io/blog/micro-frontend-module-federation)
+- 개인 blog
+  - [pnpm 환경 nextjs 세팅](https://velog.io/@ljw4536/pnpm-%EC%9C%BC%EB%A1%9C-next.js-13-typescript-%ED%99%98%EA%B2%BD-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%84%B8%ED%8C%85%ED%95%98%EA%B8%B0)
+  - [turborepo로 Monorepo 개발하기](https://velog.io/@ckstn0777/Turborepo%EB%A1%9C-Monorepo-%EA%B0%9C%EB%B0%9C-%EA%B2%BD%ED%97%98%ED%95%B4%EB%B3%B4%EA%B8%B0)
